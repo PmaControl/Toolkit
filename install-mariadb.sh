@@ -121,6 +121,7 @@ case "$OS" in
     "zesty")       ;;
     "bionic")       ;;
     "buster")       ;;
+    "focal")        ;;
     *)
         echo "This version is not supported : '$OS'"
         exit 1;
@@ -256,10 +257,7 @@ memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}' | xargs -I {} echo "sc
 
 new_buffer=$(echo "${memtotal} * 0.75" | bc -l)
 
-
-if [[ $memtotal -gt 4 ]];then
-	innodb_buffer_pool_size=$(echo "${new_buffer}" | awk '{print ($0-int($0)<0.499)?int($0):int($0)+1}')
-fi
+innodb_buffer_pool_size=$(echo "${new_buffer}" | awk '{print ($0-int($0)<0.499)?int($0):int($0)+1}')
 
 mytest service mysql stop > /dev/null
 #mytest /etc/init.d/mysql stop > /dev/null
