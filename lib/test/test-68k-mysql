@@ -1,0 +1,134 @@
+#!/usr/bin/env bats
+
+#use library : https://github.com/bats-core/bats-core
+######################################################""
+# install :
+# git clone https://github.com/bats-core/bats-core.git
+# cd cd bats-core
+# ./install.sh /usr/local
+
+source /usr/lib/ct-library
+
+
+@test "addition using bc" {
+  result="$(echo 2+2 | bc)"
+  [ "$result" -eq 4 ]
+}
+
+@test "addition using dc" {
+  result="$(echo 2 2+p | dc)"
+  [ "$result" -eq 4 ]
+}
+
+@test "[LIB] ct-library in good directory" {
+  result="$(ls -l /usr/lib/ct-library 2> /dev/null | wc -l)"
+  [ "$result" == "1" ]
+}
+
+@test "[mydumper] is available ?" {
+  result=$(command -v mydumper)
+  [[ $result == "/usr/bin/mydumper" ]]
+}
+
+@test "[mydumper] check version last" {
+  result=$(command -v mydumper)
+  version=$($result --version)
+  [[ $version == "mydumper 0.9.1"* ]]
+}
+
+@test "[mydumper] check version old" {
+  result=$(command -v mydumper)
+  version=$($result --version)
+  [[ $version != "mydumper 0.5.1"* ]]
+}
+
+@test "[myloader] is available ?" {
+  result=$(command -v myloader)
+  [[ $result == "/usr/bin/myloader" ]]
+}
+
+@test "[myloader] check version last" {
+  result=$(command -v myloader)
+  version=$($result --version)
+  [[ $version == "myloader 0.9.1"* ]]
+}
+
+@test "[myloader] check version old" {
+  result=$(command -v myloader)
+  version=$($result --version)
+  [[ $version != "myloader 0.5.1"* ]]
+}
+
+@test "[screen] is available ?" {
+  result=$(command -v screen)
+  [[ $result == "/usr/bin/screen" ]]
+}
+
+@test "[MOP] check File in SHOW MASTER STATUS" {
+  echo '+--------------------+-----------+--------------+------------------+
+| File               | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------+-----------+--------------+------------------+
+| mariadb-bin.000529 | 130464507 |              |                  |
++--------------------+-----------+--------------+------------------+' > test
+  ct_mysql_parse test
+  [[ "$MYSQL_FILE_1" == "mariadb-bin.000529" ]]
+}
+
+@test "[MOP] check Position in SHOW MASTER STATUS" {
+  echo '+--------------------+-----------+--------------+------------------+
+| File               | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------+-----------+--------------+------------------+
+| mariadb-bin.000529 | 130464507 |              |                  |
++--------------------+-----------+--------------+------------------+' > test
+  ct_mysql_parse test
+  [[ "$MYSQL_POSITION_1" == "130464507" ]]
+}
+
+@test "[MOP] check colone_name in SHOW MASTER STATUS" {
+  echo '+--------------------+-----------+--------------+------------------+
+| File               | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------+-----------+--------------+------------------+
+| mariadb-bin.000529 | 130464507 |              |                  |
++--------------------+-----------+--------------+------------------+' > test
+  ct_mysql_parse test
+  [[ "$MYSQL_FILE_0" == "File" ]]
+}
+
+@test "[MOP] check empty value in SHOW MASTER STATUS" {
+  echo '+--------------------+-----------+--------------+------------------+
+| File               | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------+-----------+--------------+------------------+
+| mariadb-bin.000529 | 130464507 |              |                  |
++--------------------+-----------+--------------+------------------+' > test
+  ct_mysql_parse test
+  [[ "$MYSQL_BINLOG_IGNORE_DB_1" == "" ]]
+}
+
+@test "[MOP] check empty value (2) in SHOW MASTER STATUS" {
+  echo '+--------------------+-----------+--------------+------------------+
+| File               | Position  | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------+-----------+--------------+------------------+
+| mariadb-bin.000529 | 130464507 |              |                  |
++--------------------+-----------+--------------+------------------+' > test
+  ct_mysql_parse test
+  [[ -z "$MYSQL_BINLOG_IGNORE_DB_1" ]]
+}
+
+@test "[MYSQL] check all result from 'select * from dual;'" {
+
+  mysql_user='adminprod'
+  mysql_password='Cr1t_0'
+  tmp_file=$(mktemp)
+  ct_mysql_query "localhost" 'select 1 as `int`, "SDHSH sdfgh" as `test`, 15.4 as `float`;'
+  mysql_result=$(cat "${tmp_file}")
+  cmp_to=$(cat <<EOF
++-----+-------------+-------+
+| int | test        | float |
++-----+-------------+-------+
+|   1 | SDHSH sdfgh |  15.4 |
++-----+-------------+-------+
+EOF
+)
+  rm ${tmp_file}
+  [[ "${mysql_result}" == "${cmp_to}" ]]
+}

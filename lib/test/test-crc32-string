@@ -1,0 +1,50 @@
+#!/usr/bin/env bats
+
+#use library : https://github.com/bats-core/bats-core
+######################################################""
+# install :
+# git clone https://github.com/bats-core/bats-core.git
+# cd cd bats-core
+# ./install.sh /usr/local
+
+source /usr/lib/ct-library
+
+@test "[LIB] ct-library in good directory" {
+  result="$(ls -l /usr/lib/ct-library 2> /dev/null | wc -l)"
+  [ "$result" == "1" ]
+}
+
+@test "[crc32] #1" {
+  result=$(ct_crc32 "DXFGNsxfnfxsNYTNwdt")
+  [[ $result -eq 2074718159 ]]
+}
+
+@test "[crc32] #2" {
+  result=$(ct_crc32 "45275782")
+  [[ $result -eq 4258585814 ]]
+}
+
+@test "[crc32] #3" {
+  result=$(ct_crc32 "127.0.0.1")
+  [[ $result -eq 3619153832 ]]
+}
+
+@test "[crc32] #4" {
+  result=$(ct_crc32 "DXFGNsxfnfxsNYTNwdt")
+  [[ $result -eq 2074718159 ]]
+}
+
+@test "[crc32] #5" {
+  result=$(ct_crc32 "DXFGNsxfnfxsNYTNwdt")
+  [[ $result -eq 2074718159 ]]
+}
+
+@test "[crc32] #6" {
+  result=$(ct_crc32 "DXFGNsxfnfxsNYTNwdt")
+  [[ $result -eq 2074718159 ]]
+}
+
+@test "[crc32] #7" {
+  result=$(ct_crc32 "DXFGNsxfnfxsNYTNwdt")
+  [[ $result -eq 2074718159 ]]
+}
