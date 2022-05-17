@@ -5,9 +5,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-# rm /etc/apt/sources.list.d/mariadb.list && curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-10.6"
-
-VERSION='10.6'
+VERSION='10.7'
 CLUSTER_NAME='68Koncept'
 CLUSTER_MEMBER=''
 PASSWORD=''
@@ -30,7 +28,7 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
         echo "-p PASSWORD             specify root password for mariadb"
         echo "-n name                 specify the name of galera cluster"
         echo "-m ip1,ip2,ip3          specify the list of member of cluster"
-        echo "-v 10.6                 specify the version of MariaDB"
+        echo "-v 10.7                 specify the version of MariaDB"
         echo "-s                      specify the hard drive are SSD"
         echo "-g                      specify to activate and make good set up for Spider"
         echo "-c                      set galera cluster ON"
@@ -181,12 +179,17 @@ if [ $REPO_LOCAL = "false" ]
 
 
 
-cat > /etc/apt/sources.list.d/mariadb.list << EOF
+rm /etc/apt/sources.list.d/mariadb.list 
+
+curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-${VERSION}"
+
+
+#cat > /etc/apt/sources.list.d/mariadb.list << EOF
 # MariaDB $VERSION repository list - created 2017-08-10 22:02 UTC
 # http://downloads.mariadb.org/mariadb/repositories/
-deb [arch=i386,amd64] http://ftp.igh.cnrs.fr/pub/mariadb/repo/${VERSION}/${DISTRIB} ${OS} main
-deb-src http://ftp.igh.cnrs.fr/pub/mariadb/repo/${VERSION}/${DISTRIB} ${OS} main
-EOF
+#deb [arch=i386,amd64] http://ftp.igh.cnrs.fr/pub/mariadb/repo/${VERSION}/${DISTRIB} ${OS} main
+#deb-src http://ftp.igh.cnrs.fr/pub/mariadb/repo/${VERSION}/${DISTRIB} ${OS} main
+#EOF
 
 fi
 
