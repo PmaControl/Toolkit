@@ -162,27 +162,9 @@ apt -y install bc
 if [ $REPO_LOCAL = "false" ]
 	then
 
-	echo "Import public key"
-	mytest wget -q -O- "http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF1656F24C74CD1D8" | apt-key add -
-	mytest wget -q -O- "http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xcbcb082a1bb943db" | apt-key add -
-
-
-	#to get missing keys
-	mytest apt-get -m -qq -y update 2> /tmp/keymissing; 
-	for key in $(grep "NO_PUBKEY" /tmp/keymissing |sed "s/.*NO_PUBKEY //"); 
-	do 
-	  echo -e "\\nProcessing key: $key"; 
-	  wget -q -O- "http://keyserver.ubuntu.com/pks/lookup?op=get&search=$key" | apt-key add -
-	  #gpg --keyserver subkeys.pgp.net --recv $key && gpg --export --armor $key | apt-key add -; 
-	done
-
-
-
-
 rm /etc/apt/sources.list.d/mariadb.list 
 
 curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-${VERSION}"
-
 
 #cat > /etc/apt/sources.list.d/mariadb.list << EOF
 # MariaDB $VERSION repository list - created 2017-08-10 22:02 UTC
@@ -214,8 +196,6 @@ else
 	
 	mytest apt-get -qq -y install mariadb-server-${VERSION}
 fi
-
-
 
 
 
@@ -274,6 +254,9 @@ mkdir -p "${DATADIR}/log"
 mkdir -p "${DATADIR}/backup"
 mkdir -p "${DATADIR}/data"
 mkdir -p "${DATADIR}/binlog"
+mkdir -p "${DATADIR}/relaylog"
+mkdir -p "${DATADIR}/tmp"
+
 
 cp -pr /var/lib/mysql/* "${DATADIR}/data"
 
@@ -348,7 +331,7 @@ socket          = /var/run/mysqld/mysqld.sock
 port            = 3306
 basedir         = /usr
 datadir         = ${DATADIR}/data
-tmpdir          = /tmp
+tmpdir          = ${DATADIR}/tmp
 lc_messages_dir = /usr/share/mysql
 lc_messages     = en_US
 
@@ -443,9 +426,9 @@ expire_logs_days        = 10
 max_binlog_size         = 1G
 
 # slaves
-#relay_log              = /var/log/mysql/relay-bin
-#relay_log_index        = /var/log/mysql/relay-bin.index
-#relay_log_info_file    = /var/log/mysql/relay-bin.info
+relay_log              = ${DATADIR}/relaylog/relay-bin
+relay_log_index        = ${DATADIR}/relaylog/relay-bin.index
+relay_log_info_file   = ${DATADIR}/relaylog/relay-bin.info
 
 log_slave_updates
 
