@@ -156,13 +156,21 @@ apt -y install lsb-release
 apt -y install wget
 apt -y install gnupg2
 apt -y install bc
-
-
+apt -y install curl
+apt -y install apt-transport-https
+apt -y install ca-certificates
 
 if [ $REPO_LOCAL = "false" ]
 	then
 
-rm /etc/apt/sources.list.d/mariadb.list 
+		MARIADB=/etc/apt/sources.list.d/mariadb.list
+
+		if [[ -f "$MARIADB" ]]
+		then
+			echo "Deleteing existing repositoriy : ${MARIADB}"
+			rm "$MARIADB"
+		fi
+
 
 curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-${VERSION}"
 
@@ -447,7 +455,7 @@ default_storage_engine  = InnoDB
 # you can't just change log file size, requires special procedure
 innodb_log_file_size    = 2G
 innodb_buffer_pool_size = ${innodb_buffer_pool_size}G
-innodb_buffer_pool_instances=8
+#innodb_buffer_pool_instances=8 ## removed for 10.7
 innodb_log_buffer_size  = 8M
 innodb_file_per_table   = 1
 innodb_open_files       = 400
@@ -534,7 +542,9 @@ wsrep_retry_autocommit=1
 wsrep_auto_increment_control=1
 
 # replicate myisam
-wsrep_replicate_myisam=1
+## wsrep_replicate_myisam=1 #removed in 10.7
+
+
 
 # retry autoinc insert, which failed for duplicate key error
 wsrep_drupal_282555_workaround=0
