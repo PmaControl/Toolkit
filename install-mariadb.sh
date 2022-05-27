@@ -18,6 +18,10 @@ REPO_LOCAL='false'
 BOOTSTRAP='false'
 DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 
+
+IP_PMACONTROL='localhost'
+
+
 while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
   case "${flag}" in
     h) 
@@ -161,6 +165,11 @@ apt -y install curl
 apt -y install apt-transport-https
 apt -y install ca-certificates
 apt -y install bsdmainutils
+apt -y install openssl
+
+
+PMACONTROL_PASSWORD=$(openssl rand -base64 40)
+
 
 
 if [ $REPO_LOCAL = "false" ]
@@ -218,9 +227,15 @@ do
     mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO sst@'$server' IDENTIFIED BY 'QSEDWGRg133' WITH GRANT OPTION;" 
 done
 
-mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO dba@'%' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION; "
+#mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO dba@'%' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION; "
 
-mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO root@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO root@'localhost' IDENTIFIED BY '${PASSWORD}' WITH GRANT OPTION;"
+mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'debian-sys-maint'@'localhost' IDENTIFIED BY '${DEBIAN_PASSWORD}' WITH GRANT OPTION;"
+
+if [[ "${IP_PMACONTROL}" != 'localhost' ]]
+then
+	mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'pmacontrol'@'${IP_PMACONTROL}' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
+fi
 
 
 
@@ -584,12 +599,12 @@ key_buffer              = 16M
 EOF
 
 
-
 if [[ -n $DEBIAN_PASSWORD ]]
 then
 
 cat > /etc/mysql/debian.cnf << EOF
 # Automatically generated for Debian scripts. DO NOT TOUCH!
+# Pmacontrol/Toolkit
 [client]
 host     = localhost
 user     = debian-sys-maint

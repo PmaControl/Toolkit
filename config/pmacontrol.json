@@ -1,0 +1,14 @@
+{
+        "mysql": [{
+                "fqdn": "{%IP%}",
+                "display_name": "@hostname",
+                "port": "3306",
+                "login": "pmacontrol",
+                "password": "secret_password",
+                "tag": ["gcp"],
+                "organization": "68Koncept",
+                "environment": "Production",
+                "ssh_ip": "{%IP%}",
+                "ssh_port": "22"
+        }]
+}
