@@ -20,7 +20,7 @@ DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 
 
 IP_PMACONTROL='localhost'
-
+ADD_TO_PMACONTROL='false'
 
 while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
   case "${flag}" in
@@ -42,6 +42,7 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
 	echo "-b		      boostrap a new cluster"
 	echo "-d                      specify directory where MariaDB will be installed"
 	echo "-x		      specify the password for debian-sys-maint (for cluster)"
+	echo "-a		      add server automatically to pmacontrol server,login,password"
         exit 0
     ;;
     p) PASSWORD="${OPTARG}" ;;
@@ -56,13 +57,15 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
     r) REPO_LOCAL='true';;
     b) BOOTSTRAP='true';;
     x) DEBIAN_PASSWORD="${OPTARG}" ;;
+    a) ADD_TO_PMACONTROL='true'
+       PMA_PARAM="{OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
   esac
 done
 
-
+echo "PMA_ARG : $PMA_ARG"
 
 function purge {
  export DEBIAN_FRONTEND=noninteractive
@@ -169,6 +172,23 @@ apt -y install openssl
 
 
 PMACONTROL_PASSWORD=$(openssl rand -base64 40)
+
+
+if [[ $ADD_TO_PMACONTROL = "true" ]]
+then
+	PMACONTROL_IP="$(echo $PMA_PARAM | cut -d',' -f1)"	
+	PMACONTROL_USER="$(echo $PMA_PARAM | cut -d',' -f2)"
+	PMACONTROL_PASSWORD="$(echo $PMA_PARAM | cut -d',' -f3)"
+
+	tmpfile='/tmp/pmcontrol.json'
+	cp -a config/pmacontrol.json "${tmpfile}"
+
+	sed "s/{%IP%}/${PMACONTROL_IP}/g" -i "${tmpfile}"
+	sed "s/{%PASSWORD%}/${PMACONTROL_PASSWORD}/g" -i "${tmpfile}"
+	sed "s/{%IP%}/${PMACONTROL_IP}/g" -i "${tmpfile}"
+
+
+fi
 
 
 
