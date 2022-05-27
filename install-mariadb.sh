@@ -122,9 +122,10 @@ case "$OS" in
     "stretch")     ;;
     "xenial")      ;;
     "zesty")       ;;
-    "bionic")       ;;
-    "buster")       ;;
-    "focal")        ;;
+    "bionic")      ;;
+    "buster")      ;;
+    "focal")       ;;
+    "bullseye")    ;;
     *)
         echo "This version is not supported : '$OS'"
         exit 1;
