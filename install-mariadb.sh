@@ -160,6 +160,8 @@ apt -y install bc
 apt -y install curl
 apt -y install apt-transport-https
 apt -y install ca-certificates
+apt -y install bsdmainutils
+
 
 if [ $REPO_LOCAL = "false" ]
 	then
