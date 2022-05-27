@@ -22,7 +22,7 @@ DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 IP_PMACONTROL='localhost'
 ADD_TO_PMACONTROL='false'
 
-while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
+while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
   case "${flag}" in
     h) 
         echo "auto install mariadb"
@@ -65,7 +65,7 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
   esac
 done
 
-echo "PMA_ARG : $PMA_ARG"
+echo "PMA_ARG : $PMA_PARAM"
 
 function purge {
  export DEBIAN_FRONTEND=noninteractive
