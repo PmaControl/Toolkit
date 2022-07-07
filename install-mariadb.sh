@@ -18,7 +18,11 @@ REPO_LOCAL='false'
 BOOTSTRAP='false'
 DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 
-while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
+
+IP_PMACONTROL='localhost'
+ADD_TO_PMACONTROL='false'
+
+while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
   case "${flag}" in
     h) 
         echo "auto install mariadb"
@@ -38,6 +42,7 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
 	echo "-b		      boostrap a new cluster"
 	echo "-d                      specify directory where MariaDB will be installed"
 	echo "-x		      specify the password for debian-sys-maint (for cluster)"
+	echo "-a		      add server automatically to pmacontrol server,login,password"
         exit 0
     ;;
     p) PASSWORD="${OPTARG}" ;;
@@ -52,13 +57,15 @@ while getopts 'hp:n:m:xv:sgcud:rbx:' flag; do
     r) REPO_LOCAL='true';;
     b) BOOTSTRAP='true';;
     x) DEBIAN_PASSWORD="${OPTARG}" ;;
+    a) ADD_TO_PMACONTROL='true'
+       PMA_PARAM="{OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
   esac
 done
 
-
+echo "PMA_ARG : $PMA_PARAM"
 
 function purge {
  export DEBIAN_FRONTEND=noninteractive
@@ -122,9 +129,10 @@ case "$OS" in
     "stretch")     ;;
     "xenial")      ;;
     "zesty")       ;;
-    "bionic")       ;;
-    "buster")       ;;
-    "focal")        ;;
+    "bionic")      ;;
+    "buster")      ;;
+    "focal")       ;;
+    "bullseye")    ;;
     *)
         echo "This version is not supported : '$OS'"
         exit 1;
@@ -156,13 +164,45 @@ apt -y install lsb-release
 apt -y install wget
 apt -y install gnupg2
 apt -y install bc
+apt -y install curl
+apt -y install apt-transport-https
+apt -y install ca-certificates
+apt -y install bsdmainutils
+apt -y install openssl
+
+
+PMACONTROL_PASSWORD=$(openssl rand -base64 40)
+
+
+if [[ $ADD_TO_PMACONTROL = "true" ]]
+then
+	PMACONTROL_IP="$(echo $PMA_PARAM | cut -d',' -f1)"	
+	PMACONTROL_USER="$(echo $PMA_PARAM | cut -d',' -f2)"
+	PMACONTROL_PASSWORD="$(echo $PMA_PARAM | cut -d',' -f3)"
+
+	tmpfile='/tmp/pmcontrol.json'
+	cp -a config/pmacontrol.json "${tmpfile}"
+
+	sed "s/{%IP%}/${PMACONTROL_IP}/g" -i "${tmpfile}"
+	sed "s/{%PASSWORD%}/${PMACONTROL_PASSWORD}/g" -i "${tmpfile}"
+	sed "s/{%IP%}/${PMACONTROL_IP}/g" -i "${tmpfile}"
+
+
+fi
 
 
 
 if [ $REPO_LOCAL = "false" ]
 	then
 
-rm /etc/apt/sources.list.d/mariadb.list 
+		MARIADB=/etc/apt/sources.list.d/mariadb.list
+
+		if [[ -f "$MARIADB" ]]
+		then
+			echo "Deleteing existing repositoriy : ${MARIADB}"
+			rm "$MARIADB"
+		fi
+
 
 curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mariadb-server-version="mariadb-${VERSION}"
 
@@ -207,9 +247,15 @@ do
     mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO sst@'$server' IDENTIFIED BY 'QSEDWGRg133' WITH GRANT OPTION;" 
 done
 
-mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO dba@'%' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION; "
+#mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO dba@'%' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION; "
 
-mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO root@'localhost' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION;"
+mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO root@'localhost' IDENTIFIED BY '${PASSWORD}' WITH GRANT OPTION;"
+mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'debian-sys-maint'@'localhost' IDENTIFIED BY '${DEBIAN_PASSWORD}' WITH GRANT OPTION;"
+
+if [[ "${IP_PMACONTROL}" != 'localhost' ]]
+then
+	mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'pmacontrol'@'${IP_PMACONTROL}' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
+fi
 
 
 
@@ -447,7 +493,7 @@ default_storage_engine  = InnoDB
 # you can't just change log file size, requires special procedure
 innodb_log_file_size    = 2G
 innodb_buffer_pool_size = ${innodb_buffer_pool_size}G
-innodb_buffer_pool_instances=8
+#innodb_buffer_pool_instances=8 ## removed for 10.7
 innodb_log_buffer_size  = 8M
 innodb_file_per_table   = 1
 innodb_open_files       = 400
@@ -534,7 +580,9 @@ wsrep_retry_autocommit=1
 wsrep_auto_increment_control=1
 
 # replicate myisam
-wsrep_replicate_myisam=1
+## wsrep_replicate_myisam=1 #removed in 10.7
+
+
 
 # retry autoinc insert, which failed for duplicate key error
 wsrep_drupal_282555_workaround=0
@@ -571,12 +619,12 @@ key_buffer              = 16M
 EOF
 
 
-
 if [[ -n $DEBIAN_PASSWORD ]]
 then
 
 cat > /etc/mysql/debian.cnf << EOF
 # Automatically generated for Debian scripts. DO NOT TOUCH!
+# Pmacontrol/Toolkit
 [client]
 host     = localhost
 user     = debian-sys-maint
