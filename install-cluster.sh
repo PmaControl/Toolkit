@@ -106,9 +106,7 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     # ssh ${SSH_USER}@${mariadb} "mysql -e " 2>&1 
 done
 
-
-
-./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U ${SSH_USER}
+./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}"
 
 
 # TODO : take in consideration of all server are not in same /24
@@ -123,3 +121,23 @@ done
 #CHANGE MASTER TO MASTER_HOST='10.112.5.14', MASTER_USER='replication', MASTER_PASSWORD='d937jkF19KCfc9xfkCiL8Q2D2l1UhOroQpIv6zHLvQI', MASTER_LOG_FILE='mariadb-bin.000001', MASTER_LOG_POS=923;
 
 #mysql -e "GRANT USAGE ON *.* TO proxysql@'${ip1}.${ip2}.${ip3}.%' IDENTIFIED BY 'UIlvRolnc1RYzLZweB4kEZGthhSyd9A6oEs1sTKZ39Y';"
+
+echo "#################################################"
+echo "# PASSWORD GENERATION "
+echo "#################################################"
+echo ""
+echo "#################################################"
+echo "MySQL"
+echo "#################################################"
+echo "PmaControl  : ${PMACONTROL_USER} // ${PMACONTROL_PASSWORD}"
+echo "ProxySQL    : ${PROXYSQL_USER} // ${PROXYSQL_PASSWORD}"
+echo "Replication : ${REPLICATION_USER} // ${REPLICATION_PASSWORD}"
+echo "DBA : ${DBA_USER} // ${DBA_PASSWORD}"
+echo ""
+echo "#################################################"
+echo "ProxySQL Admin"
+echo "#################################################"
+echo "ProxySQL ADMIN : ${PROXYSQLADMIN_USER} // ${PROXYSQLADMIN_PASSWORD}"
+echo ""
+echo ""
+echo "Install termined successfully !"
