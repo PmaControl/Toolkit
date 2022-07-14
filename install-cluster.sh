@@ -2,11 +2,11 @@
 set +x
 set -euo pipefail
 
-while getopts 'hm:p:o:t:a:u:' flag; do
+while getopts 'hm:p:o:t:a:u:s:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
-        echo "example : ./install-cluster.sh -m '10.114.5.14,10.114.5.15,10.114.5.16' -p '10.114.5.11,10.114.5.12' -o '10.114.5.13'"
+        echo "example : ./install-cluster.sh -m '10.114.5.14,10.114.5.15,10.114.5.16' -p '10.114.5.11,10.114.5.12' -o '10.114.5.13' -s 'serversource'"
         echo " "
         echo "options:"
 
@@ -15,6 +15,7 @@ while getopts 'hm:p:o:t:a:u:' flag; do
         echo "-o                      specify the list of mysql orchestrator"
         echo "-t                      type of topology (Master / Slave (MS) or Galera Cluster (GC)"
         echo "-a                      parameter for Pmacontrol"
+        echo "-s                      server source"
 
         exit 0
     ;;
@@ -24,6 +25,7 @@ while getopts 'hm:p:o:t:a:u:' flag; do
     t) ARCHICTECTURE_TYPE="${OPTARG}" ;;
     a) PMACONTROL_PARAM="${OPTARG}";;
     u) SSH_USER="${OPTARG}" ;;
+    s) SERVER_SOURCE="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -81,9 +83,12 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     ssh ${SSH_USER}@${mariadb} "whoami" 2>&1 
 done
 
+echo "#########################################"
 echo "Install MariaDB Server"
+echo "#########################################"
 
-./install-mariadb-server.sh -m '10.68.68.183,10.68.68.186,10.68.68.187' -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+
+./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
 
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"

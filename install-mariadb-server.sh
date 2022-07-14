@@ -42,8 +42,25 @@ then
       sudo -s
   fi
 
+  echo "#########################################"
+  echo "apt update"
+  echo "#########################################"
+
+  set +e
   apt update
+  set -e
+
+  echo "#########################################"
+  echo "apt upgrade"
+  echo "#########################################"
+
   apt -y upgrade
+
+
+  echo "#########################################"
+  echo "apt install ..."
+  echo "#########################################"
+
   apt install -y fdisk
   apt install -y git
   apt install -y tig

@@ -60,7 +60,9 @@ then
 
     curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s
 
+    set +e
     apt update
+    set -e
     apt upgrade -y
 
     apt install -y mariadb-client
@@ -83,7 +85,9 @@ then
 
     echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | tee /etc/apt/sources.list.d/proxysql.list
 
+    set +e
     apt update
+    set -e
     apt-get install proxysql
 
     echo "Proxysql SQL installed"
@@ -92,15 +96,28 @@ then
 
     echo "Proxysql SQL up & running"
 
-    mysql -u admin -padmin -P 6032 -e "UPDATE global_variables SET variable_value='${PROXYSQLADMIN_USER}:${PROXYSQLADMIN_PASSWORD}' WHERE variable_name='admin-admin_credentials';"
-    mysql -u admin -padmin -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
+
+    ip a
+    nmap localhost -p 6032
+
+
+
+    sleep 10
+    echo "end sleep 10"
+
+
+    mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "UPDATE global_variables SET variable_value='${PROXYSQLADMIN_USER}:${PROXYSQLADMIN_PASSWORD}' WHERE variable_name='admin-admin_credentials';"
+    mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
+
+
+    echo "add file /root/.my.cnf"
 
     cat > /root/.my.cnf << EOF
 [client]
 user=${PROXYSQLADMIN_USER}
 password=${PROXYSQLADMIN_PASSWORD}
 host=127.0.0.1
-port=6032
+#port=6032
 EOF
 
     cat /root/.my.cnf
@@ -109,20 +126,34 @@ EOF
     systemctl restart proxysql
 
 
-    mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
-    mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
-
-    mysql -e "LOAD ADMIN VARIABLES TO RUNTIME;"
-    mysql -e "SAVE ADMIN VARIABLES TO DISK;"
+    proxyadmin="mysql -h ${SERVER_TO_INSTALL} -u ${PROXYSQLADMIN_USER} -p${PROXYSQLADMIN_PASSWORD} -P 6032"
 
 
+    mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
+    mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
 
+    #mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
+    #mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
+
+    mysql -P 6032 -e "LOAD ADMIN VARIABLES TO RUNTIME;"
+    mysql -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
+
+
+    IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
+    
     for proxysql in "${PROXYSQL_SERVER[@]}"; do
-        mysql -e "INSERT INTO proxysql_servers(hostname, port,weight,comment) VALUES ('${proxysql}', 6032,0,'ProxySQL : ${proxysql}');"
+        mysql -P 6032 -e "INSERT INTO proxysql_servers(hostname, port,weight,comment) VALUES ('${proxysql}', 6032,0,'ProxySQL : ${proxysql}');"
     done
 
-    mysql -e "SAVE PROXYSQL SERVERS TO DISK"
-    mysql -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
+    mysql -P 6032 -e "SAVE MYSQL VARIABLES TO DISK;"
+    mysql -P 6032 -e "LOAD MYSQL VARIABLES TO RUNTIME;"
+    
+    mysql -P 6032 -e "SAVE PROXYSQL SERVERS TO DISK"
+    mysql -P 6032 -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
+
+
+
+
     
 else
     IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"

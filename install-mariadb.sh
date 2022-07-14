@@ -215,8 +215,10 @@ curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s -- --mari
 
 fi
 
+set +e
 mytest apt-get -m -qq -y update
-mytest apt-get -qq -y upgrade
+set -e
+
 
 mytest apt-get -qq -y install software-properties-common
 
@@ -236,9 +238,6 @@ else
 	
 	mytest apt-get -qq -y install mariadb-server-${VERSION}
 fi
-
-
-
 
 IFS=',' read -r -a array <<< "$CLUSTER_MEMBER"
 
@@ -303,13 +302,11 @@ mkdir -p "${DATADIR}/binlog"
 mkdir -p "${DATADIR}/relaylog"
 mkdir -p "${DATADIR}/tmp"
 
-
 cp -pr /var/lib/mysql/* "${DATADIR}/data"
 
 chown mysql:mysql -R "${DATADIR}"
 
 # install xtrabackup
-
 
 #if [ $REPO_LOCAL = "false" ]
 #then
@@ -319,12 +316,8 @@ chown mysql:mysql -R "${DATADIR}"
 #	rm percona-release_0.1-5.${OS}_all.deb
 #fi
 
-
 #iptables -A INPUT -p tcp --dport 4444 -j ACCEPT
 #iptables -A INPUT -p tcp --dport 4567 -j ACCEPT
-
-
-
 
 cat > /etc/mysql/my.cnf << EOF
 
@@ -642,8 +635,9 @@ EOF
 fi
 
 
-
+set +e
 mytest apt-get -qq update > /dev/null
+set -e
 #mytest apt-get -qq install -y percona-toolkit > /dev/null
 mytest apt-get -qq install -y netcat tar socat lsof > /dev/null
 
