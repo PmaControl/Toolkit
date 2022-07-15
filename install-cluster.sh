@@ -4,6 +4,7 @@ set -euo pipefail
 
 tmp_file=$(mktemp)
 error_mysql=$(mktemp)
+DEBUG="true"
 
 path=${BASH_SOURCE%/*}
 source $path/lib/6t-mysql-client.sh
