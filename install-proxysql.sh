@@ -52,20 +52,25 @@ then
     echo "PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}"
 
 
-    if [[ "root" != "${who}" ]]
-    then 
-        sudo -s
-    fi
-    apt install -y curl
+    #if [[ "root" != "${who}" ]]
+    #then 
+    #    sudo -s
+    #fi
 
-    curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s
+
+    
+    sudo='sudo'
+    
+    $sudo apt install -y curl
+
+    $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s
 
     set +e
-    apt update
+    $sudo apt update
     set -e
-    apt upgrade -y
+    $sudo apt upgrade -y
 
-    apt install -y mariadb-client
+    $sudo apt install -y mariadb-client
 
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
     
@@ -77,34 +82,33 @@ then
         fi
     done
 
-    apt -y install wget
-    apt -y install gnupg2
-    apt -y install lsb-release
-    apt -y install nmap
+    $sudo apt -y install wget
+    $sudo apt -y install gnupg2
+    $sudo apt -y install lsb-release
+    $sudo apt -y install nmap
 
 
     wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | apt-key add -
 
-    echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | tee /etc/apt/sources.list.d/proxysql.list
+    $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | tee /etc/apt/sources.list.d/proxysql.list
 
     set +e
-    apt update
+    $sudo apt update
     set -e
-    apt-get install proxysql
+    $sudo apt-get install proxysql
 
     echo "Proxysql SQL installed"
 
-    systemctl start proxysql
+    $sudo systemctl start proxysql
 
     echo "Proxysql SQL up & running"
 
+    $sudo ip a
+    $sudo nmap localhost -p 6032
+    $sudo nmap $SERVER_TO_INSTALL -p 6032
 
-    ip a
-    nmap localhost -p 6032
-    nmap $SERVER_TO_INSTALL -p 6032
 
-
-    sleep 10
+    $sudo sleep 10
     echo "end sleep 10"
 
 
@@ -114,7 +118,7 @@ then
 
     echo "add file /root/.my.cnf"
 
-    cat > /root/.my.cnf << EOF
+    $sudo cat > /root/.my.cnf << EOF
 [client]
 user=${PROXYSQLADMIN_USER}
 password=${PROXYSQLADMIN_PASSWORD}
@@ -122,10 +126,10 @@ host=127.0.0.1
 #port=6032
 EOF
 
-    cat /root/.my.cnf
+    $sudo cat /root/.my.cnf
 
     echo "restart proxysql"
-    systemctl restart proxysql
+    $sudo systemctl restart proxysql
 
     sleep 10
 
@@ -135,47 +139,45 @@ EOF
     echo "proxyadmin"
 	$proxyadmin -e "show processlist;"
 
-    mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
-    mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
 
-    #mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
-    #mysql -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
 
-    mysql -P 6032 -e "LOAD ADMIN VARIABLES TO RUNTIME;"
-    mysql -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
+   $proxyadmin -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
+   $proxyadmin -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
+   $proxyadmin -e "LOAD ADMIN VARIABLES TO RUNTIME;"
+   $proxyadmin -e "SAVE ADMIN VARIABLES TO DISK;"
 
 
     IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
     
     for proxysql in "${PROXYSQL_SERVER[@]}"; do
-        mysql -P 6032 -e "INSERT INTO proxysql_servers(hostname, port,weight,comment) VALUES ('${proxysql}', 6032,0,'ProxySQL : ${proxysql}');"
+       $proxyadmin -e "INSERT INTO proxysql_servers(hostname, port,weight,comment) VALUES ('${proxysql}', 6032,0,'ProxySQL : ${proxysql}');"
     done
 
-    mysql -P 6032 -e "SAVE MYSQL VARIABLES TO DISK;"
-    mysql -P 6032 -e "LOAD MYSQL VARIABLES TO RUNTIME;"
+   $proxyadmin -e "SAVE MYSQL VARIABLES TO DISK;"
+   $proxyadmin -e "LOAD MYSQL VARIABLES TO RUNTIME;"
     
-    mysql -P 6032 -e "SAVE PROXYSQL SERVERS TO DISK"
-    mysql -P 6032 -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
+   $proxyadmin -e "SAVE PROXYSQL SERVERS TO DISK"
+   $proxyadmin -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
 
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
     
     echo "Test mysql account for ProxySQL"
     for i in "${MARIADB_SERVER[@]}"; do
 
-        mysql -P 6032 -e "INSERT INTO mysql_servers VALUES(10,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server and write server');"
-        mysql -P 6032 -e "INSERT INTO mysql_servers VALUES(20,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server');"
+       $proxyadmin -e "INSERT INTO mysql_servers VALUES(10,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server and write server');"
+       $proxyadmin -e "INSERT INTO mysql_servers VALUES(20,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server');"
     done
 
-    mysql -P 6032 -e "INSERT INTO mysql_replication_hostgroups (writer_hostgroup, reader_hostgroup, comment) VALUES (10, 20, 'Master / Slave');"
-    mysql -P 6032 -e "LOAD MYSQL SERVERS TO RUNTIME;"
-    mysql -P 6032 -e "SAVE MYSQL SERVERS TO DISK;"
+   $proxyadmin -e "INSERT INTO mysql_replication_hostgroups (writer_hostgroup, reader_hostgroup, comment) VALUES (10, 20, 'Master / Slave');"
+   $proxyadmin -e "LOAD MYSQL SERVERS TO RUNTIME;"
+   $proxyadmin -e "SAVE MYSQL SERVERS TO DISK;"
 
     #regles de routage
-    mysql -P 6032 -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.*',20, 0);"
-    mysql -P 6032 -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.* FOR UPDATE',10, 1);"
+   $proxyadmin -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.*',20, 0);"
+   $proxyadmin -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.* FOR UPDATE',10, 1);"
 
-    mysql -P 6032 -e "LOAD MYSQL QUERY RULES TO RUNTIME;"
-    mysql -P 6032 -e "SAVE MYSQL QUERY RULES TO DISK;"
+   $proxyadmin -e "LOAD MYSQL QUERY RULES TO RUNTIME;"
+   $proxyadmin -e "SAVE MYSQL QUERY RULES TO DISK;"
 
 
     #mysql --defaults-file=/etc/mysql/debian.cnf -B -e "select CONCAT('INSERT INTO mysql_users (username, password, active, default_hostgroup) VALUES (\'',User,'\',\'',Password,'\', 1, 10);') from mysql.user where password != '' and host = '%' group by user;"

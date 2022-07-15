@@ -35,38 +35,51 @@ if [[ ! -z "${SERVER_TO_INSTALL}" ]]
 then
 
   who=$(whoami)
-  echo "whoami : ${who}"
+  echo "~~~~~~~~~~~~~~~~ whoami : ${who}"
   
-  if [[ "root" != "${who}" ]]
-  then 
-      sudo -s
-  fi
+  #if [[ "root" == "${who}" ]]
+  #then 
+  #    echo "deja en root"
+  #else
+  #    echo "Passage en root"
+  #    sudo -s
+  #fi
+
+
+  sudo='sudo'
+
+  sleep 1
+  who=$(sudo whoami)
+  echo "############### whoami : ${who}"
+
+
 
   echo "#########################################"
   echo "apt update"
   echo "#########################################"
 
   set +e
-  apt update
+  $sudo apt update
   set -e
 
   echo "#########################################"
   echo "apt upgrade"
   echo "#########################################"
 
-  apt -y upgrade
+  $sudo apt -y upgrade
 
 
   echo "#########################################"
   echo "apt install ..."
   echo "#########################################"
 
-  apt install -y fdisk
-  apt install -y git
-  apt install -y tig
-  apt install -y wget
+  $sudo apt install -y fdisk
+  $sudo apt install -y git
+  $sudo apt install -y tig
+  $sudo apt install -y wget
+  #$sudo apt install -y tee
 
-  sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | fdisk /dev/sdb
+  $sudo sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | $sudo fdisk /dev/sdb
     o # clear the in memory partition table
     n # new partition
     p # primary partition
@@ -78,23 +91,25 @@ then
     q # and we're done
 EOF
 
-  mkfs.ext4 /dev/sdb1
+  $sudo mkfs.ext4 /dev/sdb1
 
-  blkid /dev/sdb1
+  $sudo blkid /dev/sdb1
 
-  blkid=$(blkid /dev/sdb1 | cut -f 2 -d '=' | cut -f1 -d ' ')
-  echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" >> /etc/fstab
+  blkid=$($sudo blkid /dev/sdb1 | cut -f 2 -d '=' | cut -f1 -d ' ')
 
-  mount -a
+  #montage="UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0"
+  echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" | $sudo tee -a /etc/fstab
+
+  $sudo mount -a
 
   cd /srv
-  mkdir code
+  $sudo mkdir code
   cd code
-  git clone https://github.com/PmaControl/Toolkit.git toolkit
+  $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
-  pass=$(openssl rand -base64 32)
-  ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
+  pass=$($sudo openssl rand -base64 32)
+  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
 
   mysql -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
@@ -112,5 +127,3 @@ else
 
     done
 fi
-
-
