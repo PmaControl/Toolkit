@@ -669,4 +669,4 @@ echo -e "set mouse=r" >> /root/.vimrc
 apt-get -qq install -y tree locate screen iftop htop curl git unzip atop nmap > /dev/null
 
 
-mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql
+mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql mysql

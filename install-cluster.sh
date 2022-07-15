@@ -111,7 +111,25 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     # ssh ${SSH_USER}@${mariadb} "mysql -e " 2>&1 
 done
 
+# set up replication 
+
+
+
+
+MASTER=$(echo ${MARIADB_SERVERS} | cut -f 1 -d ",")
+
+mysql -h ${MASTER} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
+
+
+
+
+
 ./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}"
+
+
+
+
+
 
 
 # TODO : take in consideration of all server are not in same /24
