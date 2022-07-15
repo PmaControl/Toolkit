@@ -99,7 +99,7 @@ echo "#########################################"
 
 ./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
 
-
+set +x
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
     echo "create user to ${SSH_USER}@${mariadb}"
@@ -136,6 +136,9 @@ IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
 
     if [[ "${mariadb}" != "${MASTER}" ]]; then
+
+        echo "Serveur : ${mariadb}"
+        echo "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "START SLAVE;"
         sleep 1
@@ -184,3 +187,5 @@ echo "Install termined successfully !"
 
 rm -rf "${tmp_file}"
 rm -rf "${error_mysql}"
+
+

@@ -63,7 +63,7 @@ then
     
     $sudo apt install -y curl
 
-    $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | bash -s
+    $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
 
     set +e
     $sudo apt update
@@ -88,9 +88,9 @@ then
     $sudo apt -y install nmap
 
 
-    wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | apt-key add -
+    wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
 
-    $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | tee /etc/apt/sources.list.d/proxysql.list
+    $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | $sudo tee /etc/apt/sources.list.d/proxysql.list
 
     set +e
     $sudo apt update
@@ -118,13 +118,13 @@ then
 
     echo "add file /root/.my.cnf"
 
-    $sudo cat > /root/.my.cnf << EOF
+    $sudo bash -c "cat > /root/.my.cnf << EOF
 [client]
 user=${PROXYSQLADMIN_USER}
 password=${PROXYSQLADMIN_PASSWORD}
 host=127.0.0.1
 #port=6032
-EOF
+EOF"
 
     $sudo cat /root/.my.cnf
 

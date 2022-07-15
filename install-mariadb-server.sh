@@ -111,7 +111,7 @@ EOF
   pass=$($sudo openssl rand -base64 32)
   $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
 
-  mysql -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
+  $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
 else
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
