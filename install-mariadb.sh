@@ -355,6 +355,7 @@ nice            = 0
 # * Basic Settings
 #
 
+sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 performance_schema=ON
 
 character-set-server  = utf8 
@@ -668,3 +669,4 @@ echo -e "set mouse=r" >> /root/.vimrc
 apt-get -qq install -y tree locate screen iftop htop curl git unzip atop nmap > /dev/null
 
 
+mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql

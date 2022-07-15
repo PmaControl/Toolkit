@@ -38,7 +38,7 @@ PMACONTROL_PASSWORD=$(openssl rand -base64 32)
 PROXYSQL_USER="proxysql"
 PROXYSQL_PASSWORD=$(openssl rand -base64 32)
 
-REPLICATION_USER="replication"
+REPLICATION_USER="replication_slave"
 REPLICATION_PASSWORD=$(openssl rand -base64 32)
 
 PROXYSQLADMIN_USER="proxysql"
