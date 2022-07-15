@@ -132,9 +132,8 @@ EOF
     proxyadmin="mysql -h ${SERVER_TO_INSTALL} -u ${PROXYSQLADMIN_USER} -p${PROXYSQLADMIN_PASSWORD} -P 6032"
 
 
-    	echo "proxyadmin"
+    echo "proxyadmin"
 	$proxyadmin -e "show processlist;"
-
 
     mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
     mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"
@@ -158,9 +157,30 @@ EOF
     mysql -P 6032 -e "SAVE PROXYSQL SERVERS TO DISK"
     mysql -P 6032 -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
 
+    IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
+    
+    echo "Test mysql account for ProxySQL"
+    for i in "${MARIADB_SERVER[@]}"; do
+
+        mysql -P 6032 -e "INSERT INTO mysql_servers VALUES(10,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server and write server');"
+        mysql -P 6032 -e "INSERT INTO mysql_servers VALUES(20,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server');"
+    done
+
+    mysql -P 6032 -e "INSERT INTO mysql_replication_hostgroups (writer_hostgroup, reader_hostgroup, comment) VALUES (10, 20, 'Master / Slave');"
+    mysql -P 6032 -e "LOAD MYSQL SERVERS TO RUNTIME;"
+    mysql -P 6032 -e "SAVE MYSQL SERVERS TO DISK;"
+
+    #regles de routage
+    mysql -P 6032 -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.*',20, 0);"
+    mysql -P 6032 -e "INSERT INTO mysql_query_rules (active, match_digest, destination_hostgroup, apply) VALUES (1, '^SELECT.* FOR UPDATE',10, 1);"
+
+    mysql -P 6032 -e "LOAD MYSQL QUERY RULES TO RUNTIME;"
+    mysql -P 6032 -e "SAVE MYSQL QUERY RULES TO DISK;"
 
 
-
+    #mysql --defaults-file=/etc/mysql/debian.cnf -B -e "select CONCAT('INSERT INTO mysql_users (username, password, active, default_hostgroup) VALUES (\'',User,'\',\'',Password,'\', 1, 10);') from mysql.user where password != '' and host = '%' group by user;"
+    # LOAD MYSQL USERS TO RUNTIME;
+    # SAVE MYSQL USERS TO DISK;
     
 else
     IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
