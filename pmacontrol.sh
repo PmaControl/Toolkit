@@ -51,7 +51,7 @@ chmod +x install-mariadb.sh
 
 
 display "Installing MariaDB"
-./install-mariadb.sh -v 10.6 -p $password -d /srv/mysql
+./install-mariadb.sh -v 10.7 -p $password -d /srv/mysql
 
 
 
@@ -80,6 +80,7 @@ done
 display "restart MariaDB"
 service mysql restart
 
+sleep 1
 
 display "Install RocksDB for MariaDB"
 mysql -e  "INSTALL SONAME 'ha_rocksdb'"

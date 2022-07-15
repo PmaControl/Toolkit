@@ -6,7 +6,11 @@
 # Email:  aurelien@68koncept.com
 
 #pipe to connect simpply in mysql
-function 6t-mysql-query()
+
+
+
+
+function ct_mysql_query()
 {
 	rm $error_mysql
 
@@ -37,7 +41,7 @@ function 6t-mysql-query()
 
 
 
-function 6t-mysql-parse()
+function ct_mysql_parse()
 {
 	IFS=$'\n\t'
 

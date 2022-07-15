@@ -2,6 +2,14 @@
 set +x
 set -euo pipefail
 
+tmp_file=$(mktemp)
+error_mysql=$(mktemp)
+
+path=${BASH_SOURCE%/*}
+source $path/lib/6t-mysql-client.sh
+source $path/lib/6t-debug.sh
+
+
 while getopts 'hm:p:o:t:a:u:s:' flag; do
   case "${flag}" in
     h)
@@ -105,7 +113,7 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     ip2=$(echo ${mariadb} | cut -f 2 -d ".")
     ip3=$(echo ${mariadb} | cut -f 3 -d ".")
 
-    mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to ${REPLICATION_USER}@'${ip1}.${ip2}.${ip3}.%' IDENTIFIED BY '${REPLICATION_PASSWORD}' WITH GRANT OPTION;"
+    mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}' WITH GRANT OPTION;"
     
 
     # ssh ${SSH_USER}@${mariadb} "mysql -e " 2>&1 
@@ -113,23 +121,30 @@ done
 
 # set up replication 
 
-
-
-
 MASTER=$(echo ${MARIADB_SERVERS} | cut -f 1 -d ",")
 
 mysql -h ${MASTER} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
 
+mysql_user=${DBA_USER}
+mysql_password=${DBA_PASSWORD}
 
+ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
+ct_mysql_parse
 
+IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
+for mariadb in "${MARIADB_SERVER[@]}"; do
+
+    if [[ "${mariadb}" != "${MASTER}" ]]; then
+        mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
+        mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "START SLAVE;"
+        sleep 1
+        mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
+        
+    fi
+done
 
 
 ./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}"
-
-
-
-
-
 
 
 # TODO : take in consideration of all server are not in same /24
@@ -164,3 +179,7 @@ echo "ProxySQL ADMIN : ${PROXYSQLADMIN_USER} // ${PROXYSQLADMIN_PASSWORD}"
 echo ""
 echo ""
 echo "Install termined successfully !"
+
+
+rm -rf "${tmp_file}"
+rm -rf "${error_mysql}"
