@@ -80,6 +80,8 @@ then
     apt -y install wget
     apt -y install gnupg2
     apt -y install lsb-release
+    apt -y install nmap
+
 
     wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | apt-key add -
 
@@ -99,7 +101,7 @@ then
 
     ip a
     nmap localhost -p 6032
-
+    nmap $SERVER_TO_INSTALL -p 6032
 
 
     sleep 10
@@ -125,8 +127,13 @@ EOF
     echo "restart proxysql"
     systemctl restart proxysql
 
+    sleep 10
 
     proxyadmin="mysql -h ${SERVER_TO_INSTALL} -u ${PROXYSQLADMIN_USER} -p${PROXYSQLADMIN_PASSWORD} -P 6032"
+
+
+    	echo "proxyadmin"
+	$proxyadmin -e "show processlist;"
 
 
     mysql -P 6032 -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
