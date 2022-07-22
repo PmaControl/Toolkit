@@ -151,7 +151,7 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "START SLAVE;"
         sleep 1
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
-        
+        mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "set global read_only=1;"
     fi
 done
 echo "###################################################################"
