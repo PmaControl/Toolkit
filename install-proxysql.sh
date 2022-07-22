@@ -2,7 +2,7 @@
 set +x
 set -euo pipefail
 
-while getopts 'hm:p:u:P:s:U:a:b:' flag; do
+while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -17,6 +17,8 @@ while getopts 'hm:p:u:P:s:U:a:b:' flag; do
         echo "-U                      specify user for SSH (default ROOT)"
         echo "-a                      specify admin account for proxySQL"
         echo "-b                      specify password account for proxySQL"
+        echo "-o                      specify account for mOnitor proxySQL"
+        echo "-r                      specify account for mOnitor proxySQL (password)"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
@@ -27,6 +29,10 @@ while getopts 'hm:p:u:P:s:U:a:b:' flag; do
     s) SERVER_TO_INSTALL="${OPTARG}" ;;
     a) PROXYSQLADMIN_USER="${OPTARG}" ;;
     b) PROXYSQLADMIN_PASSWORD="${OPTARG}" ;;
+    o) MONITOR_USER="${OPTARG}" ;;
+    r) MONITOR_PASSWORD="${OPTARG}" ;;
+
+
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -50,7 +56,8 @@ then
     echo "SERVER_TO_INSTALL=${SERVER_TO_INSTALL}"
     echo "PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}"
     echo "PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}"
-
+    echo "MONITOR_USER=${MONITOR_USER}"
+    echo "MONITOR_PASSWORD=${MONITOR_PASSWORD}"
 
     #if [[ "root" != "${who}" ]]
     #then 
@@ -147,16 +154,19 @@ EOF"
    $proxyadmin -e "SAVE ADMIN VARIABLES TO DISK;"
 
 
+   $proxyadmin -e "UPDATE global_variables SET variable_value='${MONITOR_USER}' WHERE variable_name='mysql-monitor_username';"
+    $proxyadmin -e "UPDATE global_variables SET variable_value='${MONITOR_PASSWORD}' WHERE variable_name='mysql-monitor_password';"
+    $proxyadmin -e "LOAD MYSQL VARIABLES TO RUNTIME;"
+    $proxyadmin -e "SAVE MYSQL VARIABLES TO DISK;"
+
+
     IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
     
     for proxysql in "${PROXYSQL_SERVER[@]}"; do
        $proxyadmin -e "INSERT INTO proxysql_servers(hostname, port,weight,comment) VALUES ('${proxysql}', 6032,0,'ProxySQL : ${proxysql}');"
     done
-
-   $proxyadmin -e "SAVE MYSQL VARIABLES TO DISK;"
-   $proxyadmin -e "LOAD MYSQL VARIABLES TO RUNTIME;"
     
-   $proxyadmin -e "SAVE PROXYSQL SERVERS TO DISK"
+   $proxyadmin -e "SAVE PROXYSQL SERVERS TO DISK;"
    $proxyadmin -e "LOAD PROXYSQL SERVERS TO RUNTIME;"
 
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
@@ -194,7 +204,7 @@ else
         echo "######################################################"
         
         echo "cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} '/bin/bash'"
-        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} '/bin/bash'
+        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
 
     done

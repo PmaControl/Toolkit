@@ -53,8 +53,9 @@ REPLICATION_PASSWORD=$(openssl rand -base64 32)
 PROXYSQLADMIN_USER="proxysql"
 PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32)
 
-DBA_USER="dba"
-DBA_PASSWORD=$(openssl rand -base64 32)
+MONITOR_USER="monitor"
+MONITOR_PASSWORD=$(openssl rand -base64 32)
+
 
 
 echo "#################################################"
@@ -75,7 +76,7 @@ echo "#################################################"
 echo "ProxySQL Admin"
 echo "#################################################"
 echo "ProxySQL ADMIN : ${PROXYSQLADMIN_USER} // ${PROXYSQLADMIN_PASSWORD}"
-echo ""
+echo "Monitor ProxYSQL : // "
 echo ""
 echo ""
 
@@ -114,7 +115,7 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     ip2=$(echo ${mariadb} | cut -f 2 -d ".")
     ip3=$(echo ${mariadb} | cut -f 3 -d ".")
 
-    mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}' WITH GRANT OPTION;"
+    mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';"
     
 
     # ssh ${SSH_USER}@${mariadb} "mysql -e " 2>&1 
