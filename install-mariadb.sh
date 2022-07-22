@@ -354,7 +354,7 @@ nice            = 0
 #
 # * Basic Settings
 #
-
+innodb_strict_mode=0
 sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 performance_schema=ON
 
@@ -477,7 +477,7 @@ log_slave_updates
 #
 # If applications support it, this stricter sql_mode prevents some
 # mistakes like inserting invalid dates etc.
-#sql_mode               = NO_ENGINE_SUBSTITUTION,TRADITIONAL
+# sql_mode               = NO_ENGINE_SUBSTITUTION,TRADITIONAL
 #
 # * InnoDB
 #

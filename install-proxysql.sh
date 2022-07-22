@@ -17,8 +17,8 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
         echo "-U                      specify user for SSH (default ROOT)"
         echo "-a                      specify admin account for proxySQL"
         echo "-b                      specify password account for proxySQL"
-        echo "-o                      specify account for mOnitor proxySQL"
-        echo "-r                      specify account for mOnitor proxySQL (password)"
+        echo "-o                      specify account for monitor proxySQL"
+        echo "-r                      specify account for monitor proxySQL (password)"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
@@ -64,12 +64,15 @@ then
     #    sudo -s
     #fi
 
+    sudo=''
+    if [[ "${who}" != "root" ]]
+    then
+        echo "Passage avec SUDO"
+        sudo='sudo'
+    fi
 
-    
-    sudo='sudo'
-    
+
     $sudo apt install -y curl
-
     $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
 
     set +e
@@ -94,7 +97,6 @@ then
     $sudo apt -y install lsb-release
     $sudo apt -y install nmap
 
-
     wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
 
     $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | $sudo tee /etc/apt/sources.list.d/proxysql.list
@@ -114,14 +116,12 @@ then
     $sudo nmap localhost -p 6032
     $sudo nmap $SERVER_TO_INSTALL -p 6032
 
-
     $sudo sleep 10
     echo "end sleep 10"
 
 
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "UPDATE global_variables SET variable_value='${PROXYSQLADMIN_USER}:${PROXYSQLADMIN_PASSWORD}' WHERE variable_name='admin-admin_credentials';"
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
-
 
     echo "add file /root/.my.cnf"
 
@@ -145,8 +145,6 @@ EOF"
 
     echo "proxyadmin"
 	$proxyadmin -e "show processlist;"
-
-
 
    $proxyadmin -e "update global_variables set variable_value='${PROXYSQLADMIN_USER}' where variable_name='admin-cluster_username';"
    $proxyadmin -e "update global_variables set variable_value='${PROXYSQLADMIN_PASSWORD}' where variable_name='admin-cluster_password';"

@@ -37,19 +37,16 @@ then
   who=$(whoami)
   echo "~~~~~~~~~~~~~~~~ whoami : ${who}"
   
-  #if [[ "root" == "${who}" ]]
-  #then 
-  #    echo "deja en root"
-  #else
-  #    echo "Passage en root"
-  #    sudo -s
-  #fi
-
-
+sudo=''
+if [[ "${who}" != "root" ]]
+then
+	echo "Passage avec SUDO"
+	
   sudo='sudo'
+fi
+	
 
-  sleep 1
-  who=$(sudo whoami)
+
   echo "############### whoami : ${who}"
 
 
@@ -125,5 +122,14 @@ else
         cat $0 | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
 
+        #pids[${mariadb}]=$!
+
     done
+
+    #for pid in ${pids[*]}; do
+    #  echo "Waiting ..."
+    #  wait $pid
+    #  date
+    #  echo "END OF PID $pid"
+    #done
 fi

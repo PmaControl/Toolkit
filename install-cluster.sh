@@ -44,7 +44,7 @@ done
 PMACONTROL_USER="pmacontrol"
 PMACONTROL_PASSWORD=$(openssl rand -base64 32)
 
-PROXYSQL_USER="proxysql"
+PROXYSQL_USER="monitor"
 PROXYSQL_PASSWORD=$(openssl rand -base64 32)
 
 REPLICATION_USER="replication_slave"
@@ -56,6 +56,8 @@ PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32)
 MONITOR_USER="monitor"
 MONITOR_PASSWORD=$(openssl rand -base64 32)
 
+DBA_USER="dba"
+DBA_PASSWORD=$(openssl rand -base64 32)
 
 
 echo "#################################################"
@@ -123,6 +125,9 @@ done
 
 # set up replication 
 
+echo "###################################################################"
+echo "SET UP REPLICATION"
+echo "###################################################################"
 MASTER=$(echo ${MARIADB_SERVERS} | cut -f 1 -d ",")
 
 mysql -h ${MASTER} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
@@ -130,13 +135,15 @@ mysql -h ${MASTER} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
 mysql_user=${DBA_USER}
 mysql_password=${DBA_PASSWORD}
 
+
+
 ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
 ct_mysql_parse
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
 
-    if [[ "${mariadb}" != "${MASTER}" ]]; then
+    if [[ "${mariadb}" != "${MASTER}" ]]; then
 
         echo "Serveur : ${mariadb}"
         echo "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
@@ -147,9 +154,11 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
         
     fi
 done
+echo "###################################################################"
+echo "end set up replication"
+echo "###################################################################"
 
-
-./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}"
+./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${PROXYSQL_USER}" -r "${PROXYSQL_PASSWORD}"
 
 
 # TODO : take in consideration of all server are not in same /24
@@ -190,3 +199,35 @@ rm -rf "${tmp_file}"
 rm -rf "${error_mysql}"
 
 
+
+
+
+
+echo "INSERT INTO PMACONTROL"
+PMACONTROL_WEBSERVICE_USER=$(openssl rand -base64 16)
+PMACONTROL_WEBSERVICE_PASSWORD=$(openssl rand -base64 32)
+
+
+webservice=$(mktemp)
+secret=$(mktemp)
+
+cat > ${webservice} << EOF
+{
+"webservice": [{
+    "user": "${PMACONTROL_WEBSERVICE_USER}",
+    "host": "%",
+    "password": "${PMACONTROL_WEBSERVICE_PASSWORD}",
+    "organization": "Dalenys"
+  }]
+}
+EOF
+
+echo "ajout du compte webservice"
+cd /srv/www/pmacontrol && ./glial Webservice addAccount /tmp/webservice.json --debug
+
+
+echo "TODO : effacer le compte web service"
+
+res=$(curl --insecure -v -K ${secret} -F "conf=@${webservice}" "https://127.0.0.1/en/webservice/pushServer")
+
+echo $res
