@@ -2,7 +2,9 @@
 set +x
 set -euo pipefail
 
-while getopts 'hm:p:u:P:s:U:' flag; do
+HTTP_PROXY=''
+
+while getopts 'hm:p:u:P:s:U:y:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -15,7 +17,7 @@ while getopts 'hm:p:u:P:s:U:' flag; do
         echo "-p                      specify password for MySQL (dba )"
         echo "-U                      specify user for SSH (default ROOT)"
         echo "-a                      account for pmacontrol"
-
+        echo "-y                      proxy for connect to internet"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
@@ -25,6 +27,7 @@ while getopts 'hm:p:u:P:s:U:' flag; do
     a) PMACONTROL_ACCOUNT ;;
     x) PROXYSQL_ACCOUNT ;;
     s) SERVER_TO_INSTALL="${OPTARG}" ;;
+    y) HTTP_PROXY="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -102,11 +105,12 @@ EOF
   cd /srv
   $sudo mkdir code
   cd code
-  $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
+  $sudo http_proxy=${HTTP_PROXY} git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
   pass=$($sudo openssl rand -base64 32)
-  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
+  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh" -y "${HTTP_PROXY}"
+
 
   $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
@@ -119,11 +123,9 @@ else
         echo "# Connect to ${mariadb}"
         echo "######################################################"
         
-        cat $0 | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
+        cat $0 | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} HTTP_PROXY=${HTTP_PROXY} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
-
         #pids[${mariadb}]=$!
-
     done
 
     #for pid in ${pids[*]}; do

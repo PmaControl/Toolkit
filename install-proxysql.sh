@@ -2,7 +2,7 @@
 set +x
 set -euo pipefail
 
-while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
+while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -19,6 +19,7 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
         echo "-b                      specify password account for proxySQL"
         echo "-o                      specify account for monitor proxySQL"
         echo "-r                      specify account for monitor proxySQL (password)"
+        echo "-y                      proxy for connect to internet"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
@@ -30,7 +31,7 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
     a) PROXYSQLADMIN_USER="${OPTARG}" ;;
     b) PROXYSQLADMIN_PASSWORD="${OPTARG}" ;;
     o) MONITOR_USER="${OPTARG}" ;;
-    r) MONITOR_PASSWORD="${OPTARG}" ;;
+    y) HTTP_PROXY="${OPTARG}" ;;
 
 
     *) echo "Unexpected option ${flag}" 
@@ -73,7 +74,7 @@ then
 
 
     $sudo apt install -y curl
-    $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
+    $sudo https_proxy=${HTTP_PROXY} curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
 
     set +e
     $sudo apt update
@@ -97,7 +98,7 @@ then
     $sudo apt -y install lsb-release
     $sudo apt -y install nmap
 
-    wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
+    sudo https_proxy="${HTTP_PROXY}" wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
 
     $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | $sudo tee /etc/apt/sources.list.d/proxysql.list
 

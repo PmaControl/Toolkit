@@ -57,6 +57,7 @@ while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
     r) REPO_LOCAL='true';;
     b) BOOTSTRAP='true';;
     x) DEBIAN_PASSWORD="${OPTARG}" ;;
+    y) HTTP_PROXY="${OPTARG}" ;;
     a) ADD_TO_PMACONTROL='true'
        PMA_PARAM="{OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
@@ -64,6 +65,9 @@ while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
     ;;
   esac
 done
+
+export http_proxy=${HTTP_PROXY}
+export https_proxy=${HTTP_PROXY}
 
 echo "PMA_ARG : $PMA_PARAM"
 

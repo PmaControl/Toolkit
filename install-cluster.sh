@@ -6,12 +6,15 @@ tmp_file=$(mktemp)
 error_mysql=$(mktemp)
 DEBUG="true"
 
+
+HTTP_PROXY=''
+
 path=${BASH_SOURCE%/*}
 source $path/lib/6t-mysql-client.sh
 source $path/lib/6t-debug.sh
 
 
-while getopts 'hm:p:o:t:a:u:s:c:e:' flag; do
+while getopts 'hm:p:o:t:a:u:s:c:e:y:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -27,6 +30,7 @@ while getopts 'hm:p:o:t:a:u:s:c:e:' flag; do
         echo "-s                      server source"
         echo "-c                      client"
         echo "-e                      environment"
+        echo "-y                      proxy to get internet"
 
         exit 0
     ;;
@@ -39,6 +43,7 @@ while getopts 'hm:p:o:t:a:u:s:c:e:' flag; do
     s) SERVER_SOURCE="${OPTARG}" ;;
     c) CLIENT="${OPTARG}" ;;
     e) ENVIRONMENT="${OPTARG}" ;;
+    y) HTTP_PROXY="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -104,7 +109,7 @@ echo "Install MariaDB Server"
 echo "#########################################"
 
 
-./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}" -y "${HTTP_PROXY}"
 
 set +x
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
