@@ -11,7 +11,7 @@ source $path/lib/6t-mysql-client.sh
 source $path/lib/6t-debug.sh
 
 
-while getopts 'hm:p:o:t:a:u:s:' flag; do
+while getopts 'hm:p:o:t:a:u:s:c:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -22,19 +22,21 @@ while getopts 'hm:p:o:t:a:u:s:' flag; do
         echo "-m ip1,ip2,ip3          specify the list of mysql server coma separated"
         echo "-p ip1,ip2              specify the list of proxysql server"
         echo "-o                      specify the list of mysql orchestrator"
-        echo "-t                      type of topology (Master / Slave (MS) or Galera Cluster (GC)"
+        echo "-t                      tags"
         echo "-a                      parameter for Pmacontrol"
         echo "-s                      server source"
+        echo "-c                      client"
 
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
     p) PROXYSQL_SERVERS="${OPTARG}" ;;
     o) MYSQL_ORCHESTRATOR_SERVER="${OPTARG}" ;;
-    t) ARCHICTECTURE_TYPE="${OPTARG}" ;;
+    t) TAG="${OPTARG}" ;;
     a) PMACONTROL_PARAM="${OPTARG}";;
     u) SSH_USER="${OPTARG}" ;;
     s) SERVER_SOURCE="${OPTARG}" ;;
+    c) CLIENT="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -198,18 +200,13 @@ echo "Install termined successfully !"
 rm -rf "${tmp_file}"
 rm -rf "${error_mysql}"
 
-
-
-
-
-
 echo "INSERT INTO PMACONTROL"
 PMACONTROL_WEBSERVICE_USER=$(openssl rand -base64 16)
 PMACONTROL_WEBSERVICE_PASSWORD=$(openssl rand -base64 32)
 
-
 webservice=$(mktemp)
 secret=$(mktemp)
+server_json=$(mktemp)
 
 cat > ${webservice} << EOF
 {
@@ -223,11 +220,61 @@ cat > ${webservice} << EOF
 EOF
 
 echo "ajout du compte webservice"
-cd /srv/www/pmacontrol && ./glial Webservice addAccount /tmp/webservice.json --debug
+cd /srv/www/pmacontrol && ./glial Webservice addAccount ${webservice} --debug
+
+
+echo "Insertion des serveurs MariaDB :"
+
+IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
+for mariadb in "${MARIADB_SERVER[@]}"; do
+
+cat > ${server_json} << EOF
+{
+    "mysql": [{
+            "fqdn": "${mariadb}",
+            "display_name": "@hostname",
+            "port": "3306",
+            "login": "${PMACONTROL_USER}",
+            "password": "${PMACONTROL_PASSWORD}",
+            "tag": ["${TAG}"],
+            "organization": "${CLIENT}",
+            "environment": "UAT / Preprod",
+            "ssh_ip": "${mariadb}",
+            "ssh_port": "22"
+    }],
+}
+EOF
+    res=$(curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
+    echo $res
+done
+
+echo "Insertion des serveurs ProxySQL :"
+
+IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
+for proxysql in "${PROXYSQL_SERVER[@]}"; do
+
+cat > ${server_json} << EOF
+{
+    "mysql": [{
+            "fqdn": "${proxysql}",
+            "display_name": "@hostname",
+            "port": "6033",
+            "login": "${PMACONTROL_USER}",
+            "password": "${PMACONTROL_PASSWORD}",
+            "tag": ["${TAG}"],
+            "organization": "${CLIENT}",
+            "environment": "UAT / Preprod",
+            "ssh_ip": "${proxysql}",
+            "ssh_port": "22"
+    }],
+}
+EOF
+    res=$(curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
+    echo $res
+done
 
 
 echo "TODO : effacer le compte web service"
-
-res=$(curl --insecure -v -K ${secret} -F "conf=@${webservice}" "https://127.0.0.1/en/webservice/pushServer")
-
-echo $res
+echo ""
+echo "############################"
+echo "ALL INSTALLATION COMPLETED !"
