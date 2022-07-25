@@ -11,7 +11,7 @@ source $path/lib/6t-mysql-client.sh
 source $path/lib/6t-debug.sh
 
 
-while getopts 'hm:p:o:t:a:u:s:c:' flag; do
+while getopts 'hm:p:o:t:a:u:s:c:e:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -26,6 +26,7 @@ while getopts 'hm:p:o:t:a:u:s:c:' flag; do
         echo "-a                      parameter for Pmacontrol"
         echo "-s                      server source"
         echo "-c                      client"
+        echo "-e                      environment"
 
         exit 0
     ;;
@@ -37,6 +38,7 @@ while getopts 'hm:p:o:t:a:u:s:c:' flag; do
     u) SSH_USER="${OPTARG}" ;;
     s) SERVER_SOURCE="${OPTARG}" ;;
     c) CLIENT="${OPTARG}" ;;
+    e) ENVIRONMENT="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -238,7 +240,7 @@ cat > ${server_json} << EOF
             "password": "${PMACONTROL_PASSWORD}",
             "tag": ["${TAG}"],
             "organization": "${CLIENT}",
-            "environment": "UAT / Preprod",
+            "environment": "${ENVIRONMENT}",
             "ssh_ip": "${mariadb}",
             "ssh_port": "22"
     }],
@@ -263,7 +265,7 @@ cat > ${server_json} << EOF
             "password": "${PMACONTROL_PASSWORD}",
             "tag": ["${TAG}"],
             "organization": "${CLIENT}",
-            "environment": "UAT / Preprod",
+            "environment": "${ENVIRONMENT}",
             "ssh_ip": "${proxysql}",
             "ssh_port": "22"
     }],
