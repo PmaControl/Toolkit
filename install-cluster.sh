@@ -50,23 +50,52 @@ while getopts 'hm:p:o:t:a:u:s:c:e:y:' flag; do
   esac
 done
 
-PMACONTROL_USER="pmacontrol"
-PMACONTROL_PASSWORD=$(openssl rand -base64 32)
+password_file='/tmp/password'
 
-PROXYSQL_USER="monitor"
-PROXYSQL_PASSWORD=$(openssl rand -base64 32)
+if [ ! -f ${password_file} ]
+then
+    echo "File does not exist in Bash"
+    PMACONTROL_USER="pmacontrol"
+    PMACONTROL_PASSWORD=$(openssl rand -base64 32)
 
-REPLICATION_USER="replication_slave"
-REPLICATION_PASSWORD=$(openssl rand -base64 32)
+    PROXYSQL_USER="monitor"
+    PROXYSQL_PASSWORD=$(openssl rand -base64 32)
 
-PROXYSQLADMIN_USER="proxysql"
-PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32)
+    REPLICATION_USER="replication_slave"
+    REPLICATION_PASSWORD=$(openssl rand -base64 32)
 
-MONITOR_USER="monitor"
-MONITOR_PASSWORD=$(openssl rand -base64 32)
+    PROXYSQLADMIN_USER="proxysql"
+    PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32)
 
-DBA_USER="dba"
-DBA_PASSWORD=$(openssl rand -base64 32)
+    MONITOR_USER="monitor"
+    MONITOR_PASSWORD=$(openssl rand -base64 32)
+
+    DBA_USER="dba"
+    DBA_PASSWORD=$(openssl rand -base64 32)
+
+
+    cat > ${password_file} << EOF
+#!/bin/bash
+
+PMACONTROL_USER=${PMACONTROL_USER}
+PMACONTROL_PASSWORD=${PMACONTROL_PASSWORD}
+PROXYSQL_USER=${PROXYSQL_USER}
+PROXYSQL_PASSWORD=${PROXYSQL_PASSWORD}
+REPLICATION_USER=${REPLICATION_USER}
+REPLICATION_PASSWORD=${REPLICATION_PASSWORD}
+PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}
+PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}
+MONITOR_USER=${MONITOR_USER}
+MONITOR_PASSWORD=${MONITOR_PASSWORD}
+DBA_USER=${DBA_USER}
+DBA_PASSWORD=${DBA_PASSWORD}
+EOF
+
+
+else
+    echo "File found. Do something meaningful here"
+    source ${password_file}
+fi
 
 
 echo "#################################################"
@@ -90,6 +119,27 @@ echo "ProxySQL ADMIN : ${PROXYSQLADMIN_USER} // ${PROXYSQLADMIN_PASSWORD}"
 echo "Monitor ProxYSQL : // "
 echo ""
 echo ""
+echo "#################################################"
+echo "HTTP_PROXY : '${HTTP_PROXY}'"
+echo "#################################################"
+
+
+
+exit 0;
+
+
+whoami
+who=$(whoami)
+echo "whoami : ${who}"
+
+sudo=''
+if [[ "${who}" != "root" ]]
+then
+    echo "Passage avec SUDO"
+    sudo='sudo'
+fi
+
+
 
 #test ssh connection all
 IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
@@ -161,14 +211,30 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
         sleep 1
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
         mysql -h ${mariadb} -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "set global read_only=1;"
+    else
+
+
+        ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
+        ct_mysql_parse
+
+        HASH_PMACONTROL=${MYSQL_PASSWORD_1}
+
+
     fi
 done
 echo "###################################################################"
 echo "end set up replication"
 echo "###################################################################"
 
-./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${PROXYSQL_USER}" -r "${PROXYSQL_PASSWORD}"
 
+
+echo "###################################################################"
+echo "PROXYSQL START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "###################################################################"
+./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${PROXYSQL_USER}" -r "${PROXYSQL_PASSWORD}"
+echo "###################################################################"
+echo "PROXYSQL END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "###################################################################"
 
 # TODO : take in consideration of all server are not in same /24
 #ip1=$(hostname -I | cut -d' ' -f1 | cut -f 1 -d ".")
@@ -182,6 +248,18 @@ echo "###################################################################"
 #CHANGE MASTER TO MASTER_HOST='10.112.5.14', MASTER_USER='replication', MASTER_PASSWORD='d937jkF19KCfc9xfkCiL8Q2D2l1UhOroQpIv6zHLvQI', MASTER_LOG_FILE='mariadb-bin.000001', MASTER_LOG_POS=923;
 
 #mysql -e "GRANT USAGE ON *.* TO proxysql@'${ip1}.${ip2}.${ip3}.%' IDENTIFIED BY 'UIlvRolnc1RYzLZweB4kEZGthhSyd9A6oEs1sTKZ39Y';"
+
+
+
+
+echo "Ajout du Pmacontrol pour proxySQL"
+IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
+for proxysql in "${PROXYSQL_SERVER[@]}"; do
+    mysql -P 6032 -h ${proxysql} -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -e "INSERT INTO mysql_users (username, password, active, default_hostgroup) VALUES ('pmacontrol','${HASH_PMACONTROL}', 1, 10);"
+    mysql -P 6032 -h ${proxysql} -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -e "LOAD MYSQL USERS TO RUNTIME;"
+    mysql -P 6032 -h ${proxysql} -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -e "SAVE MYSQL USERS TO DISK;"
+done
+
 
 echo "#################################################"
 echo "# PASSWORD GENERATION "
@@ -213,7 +291,7 @@ PMACONTROL_WEBSERVICE_PASSWORD=$(openssl rand -base64 32)
 
 webservice=$(mktemp)
 secret=$(mktemp)
-server_json=$(mktemp)
+
 
 cat > ${webservice} << EOF
 {
@@ -227,31 +305,37 @@ cat > ${webservice} << EOF
 EOF
 
 echo "ajout du compte webservice"
-cd /srv/www/pmacontrol && ./glial Webservice addAccount ${webservice} --debug
+cd /srv/www/pmacontrol && $sudo ./glial Webservice addAccount ${webservice} --debug
 
 
 echo "Insertion des serveurs MariaDB :"
 
+
+    path_import='/srv/www/pmacontrol/configuration/import'
+    $sudo mkdir -p $path_import
+
+
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
 
-cat > ${server_json} << EOF
+$sudo bash -c "cat > ${server_json} << EOF
 {
-    "mysql": [{
-            "fqdn": "${mariadb}",
-            "display_name": "@hostname",
-            "port": "3306",
-            "login": "${PMACONTROL_USER}",
-            "password": "${PMACONTROL_PASSWORD}",
-            "tag": ["${TAG}"],
-            "organization": "${CLIENT}",
-            "environment": "${ENVIRONMENT}",
-            "ssh_ip": "${mariadb}",
-            "ssh_port": "22"
+    \"mysql\": [{
+            \"fqdn\": \"${mariadb}\",
+            \"display_name\": \"@hostname\",
+            \"port\": \"3306\",
+            \"login\": \"${PMACONTROL_USER}\",
+            \"password\": \"${PMACONTROL_PASSWORD}\",
+            \"tag\": [\"${TAG}\"],
+            \"organization\": \"${CLIENT}\",
+            \"environment\": \"${ENVIRONMENT}\",
+            \"ssh_ip\": \"${mariadb}\",
+            \"ssh_port\": \"22\"
     }],
 }
-EOF
-    res=$(curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
+EOF"
+
+    res=$($sudo curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
     echo $res
 done
 
@@ -260,23 +344,25 @@ echo "Insertion des serveurs ProxySQL :"
 IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
 for proxysql in "${PROXYSQL_SERVER[@]}"; do
 
-cat > ${server_json} << EOF
+server_json="${path_import}/${ENVIRONMENT}-${TAG}-${proxysql}-proxy.json"
+
+$sudo bash -c "cat > ${server_json} << EOF
 {
-    "mysql": [{
-            "fqdn": "${proxysql}",
-            "display_name": "@hostname",
-            "port": "6033",
-            "login": "${PMACONTROL_USER}",
-            "password": "${PMACONTROL_PASSWORD}",
-            "tag": ["${TAG}"],
-            "organization": "${CLIENT}",
-            "environment": "${ENVIRONMENT}",
-            "ssh_ip": "${proxysql}",
-            "ssh_port": "22"
+    \"mysql\": [{
+            \"fqdn\": \"${proxysql}\",
+            \"display_name\": \"@hostname\",
+            \"port\": \"6033\",
+            \"login\": \"${PMACONTROL_USER}\",
+            \"password\": \"${PMACONTROL_PASSWORD}\",
+            \"tag\": [\"${TAG}\"],
+            \"organization\": \"${CLIENT}\",
+            \"environment\": \"${ENVIRONMENT}\",
+            \"ssh_ip\": \"${proxysql}\",
+            \"ssh_port\": \"22\"
     }],
 }
-EOF
-    res=$(curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
+EOF"
+    res=$($sudo curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
     echo $res
 done
 

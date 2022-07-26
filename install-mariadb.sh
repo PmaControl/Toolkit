@@ -18,11 +18,16 @@ REPO_LOCAL='false'
 BOOTSTRAP='false'
 DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 
-
 IP_PMACONTROL='localhost'
 ADD_TO_PMACONTROL='false'
 
-while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
+
+echo "#################################################"
+echo "BEFORE"
+echo "#################################################"
+sleep 1
+
+while getopts 'hp:n:m:xv:sgcud:rbx:y:a:' flag; do
   case "${flag}" in
     h) 
         echo "auto install mariadb"
@@ -37,12 +42,13 @@ while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
         echo "-g                      specify to activate and make good set up for Spider"
         echo "-c                      set galera cluster ON"
         echo "-u                      [WARNING] purge previous version of MySQL / MariaDB"
-	echo "-d		      set datadir of MariaDB (replace of /var/lib/mysql)"
-	echo "-r		      if present use current the reposiry, else we install the one from MariaDB"
-	echo "-b		      boostrap a new cluster"
-	echo "-d                      specify directory where MariaDB will be installed"
-	echo "-x		      specify the password for debian-sys-maint (for cluster)"
-	echo "-a		      add server automatically to pmacontrol server,login,password"
+        echo "-d		      set datadir of MariaDB (replace of /var/lib/mysql)"
+        echo "-r		      if present use current the reposiry, else we install the one from MariaDB"
+        echo "-b		      boostrap a new cluster"
+        echo "-d                      specify directory where MariaDB will be installed"
+        echo "-x		      specify the password for debian-sys-maint (for cluster)"
+        echo "-y		      proxy"
+        echo "-a		      add server automatically to pmacontrol server,login,password"
         exit 0
     ;;
     p) PASSWORD="${OPTARG}" ;;
@@ -57,7 +63,6 @@ while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
     r) REPO_LOCAL='true';;
     b) BOOTSTRAP='true';;
     x) DEBIAN_PASSWORD="${OPTARG}" ;;
-    y) HTTP_PROXY="${OPTARG}" ;;
     a) ADD_TO_PMACONTROL='true'
        PMA_PARAM="{OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
@@ -65,6 +70,11 @@ while getopts 'hp:n:m:xv:sgcud:rbx:a:' flag; do
     ;;
   esac
 done
+
+echo "#################################################"
+echo "HTTP_PROXY : '${HTTP_PROXY}'"
+echo "#################################################"
+sleep 5
 
 export http_proxy=${HTTP_PROXY}
 export https_proxy=${HTTP_PROXY}
@@ -174,9 +184,7 @@ apt -y install ca-certificates
 apt -y install bsdmainutils
 apt -y install openssl
 
-
 PMACONTROL_PASSWORD=$(openssl rand -base64 40)
-
 
 if [[ $ADD_TO_PMACONTROL = "true" ]]
 then
