@@ -2,7 +2,7 @@
 set +x
 set -euo pipefail
 
-HTTP_PROXY=''
+
 
 while getopts 'hm:p:u:P:s:U:y:' flag; do
   case "${flag}" in
@@ -47,8 +47,10 @@ then
 	
   sudo='sudo'
 fi
-	
-
+    
+  echo "#################################################"
+  echo "HTTP_PROXY : '${HTTP_PROXY}'"
+  echo "#################################################"
 
   echo "############### whoami : ${who}"
 
@@ -77,19 +79,29 @@ fi
   $sudo apt install -y git
   $sudo apt install -y tig
   $sudo apt install -y wget
+  $sudo apt install -y ntp
+  $sudo apt install -y gdisk
+  
+
+
+  $sudo service ntp restart
+  
   #$sudo apt install -y tee
 
-  $sudo sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | $sudo fdisk /dev/sdb
-    o # clear the in memory partition table
-    n # new partition
-    p # primary partition
-    1 # partition number 1
-      # default - start at beginning of disk 
-      # default, extend partition to end of disk
-    p # print the in-memory partition table
-    w # write the partition table
-    q # and we're done
-EOF
+  echo "GPT"
+  printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk /dev/sdb
+
+#  $sudo sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | $sudo fdisk /dev/sdb
+#    o # clear the in memory partition table
+#    n # new partition
+#    p # primary partition
+#    1 # partition number 1
+#      # default - start at beginning of disk 
+#      # default, extend partition to end of disk
+#    p # print the in-memory partition table
+#    w # write the partition table
+#    q # and we're done
+#EOF
 
   $sudo mkfs.ext4 /dev/sdb1
 
@@ -103,20 +115,26 @@ EOF
   $sudo mount -a
 
   cd /srv
-  $sudo mkdir code
+  $sudo mkdir -p code
   cd code
-  $sudo http_proxy=${HTTP_PROXY} git clone https://github.com/PmaControl/Toolkit.git toolkit
+
+  echo "PROXY : '${HTTP_PROXY}'"
+
+  $sudo git config --global http.proxy "${HTTP_PROXY}"
+  $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
   pass=$($sudo openssl rand -base64 32)
-  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh" -y "${HTTP_PROXY}"
+
+  ##HTTP_PROXY=${HTTP_PROXY}
+  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
 
 
   $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
 else
+
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
-    
     for mariadb in "${MARIADB_SERVER[@]}"; do
 
         echo "######################################################"

@@ -31,6 +31,7 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
     a) PROXYSQLADMIN_USER="${OPTARG}" ;;
     b) PROXYSQLADMIN_PASSWORD="${OPTARG}" ;;
     o) MONITOR_USER="${OPTARG}" ;;
+    r) MONITOR_PASSWORD="${OPTARG}" ;;
     y) HTTP_PROXY="${OPTARG}" ;;
 
 
@@ -40,6 +41,22 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
   esac
 done
 
+    echo "SSH_USER=${SSH_USER}"
+    echo "MARIADB_SERVERS=${MARIADB_SERVERS}"
+    echo "PROXYSQL_SERVERS=${PROXYSQL_SERVERS}"
+    echo "MYSQL_USER=${MYSQL_USER}"
+    echo "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
+    echo "SERVER_TO_INSTALL=${SERVER_TO_INSTALL}"
+    echo "PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}"
+    echo "PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}"
+    echo "MONITOR_USER=${MONITOR_USER}"
+    echo "MONITOR_PASSWORD=${MONITOR_PASSWORD}"
+    
+
+  echo "#################################################"
+  echo "HTTP_PROXY : '${HTTP_PROXY}'"
+  echo "#################################################"
+  sleep 1
 #echo "server : ${SERVER_TO_INSTALL}\n"
 
 if [[ ! -z "${SERVER_TO_INSTALL}" ]]
@@ -72,14 +89,21 @@ then
         sudo='sudo'
     fi
 
-
-    $sudo apt install -y curl
-    $sudo https_proxy=${HTTP_PROXY} curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
-
     set +e
     $sudo apt update
     set -e
     $sudo apt upgrade -y
+
+    if [ ! -f "/etc/apt/sources.list.d/mariadb.list" ]
+    then
+        $sudo apt install -y curl
+        $sudo https_proxy=${HTTP_PROXY} curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
+    fi
+    
+    set +e
+    $sudo apt update
+    set -e
+
 
     $sudo apt install -y mariadb-client
 
@@ -120,7 +144,6 @@ then
     $sudo sleep 10
     echo "end sleep 10"
 
-
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "UPDATE global_variables SET variable_value='${PROXYSQLADMIN_USER}:${PROXYSQLADMIN_PASSWORD}' WHERE variable_name='admin-admin_credentials';"
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
 
@@ -143,7 +166,6 @@ EOF"
 
     proxyadmin="mysql -h ${SERVER_TO_INSTALL} -u ${PROXYSQLADMIN_USER} -p${PROXYSQLADMIN_PASSWORD} -P 6032"
 
-
     echo "proxyadmin"
 	$proxyadmin -e "show processlist;"
 
@@ -152,12 +174,10 @@ EOF"
    $proxyadmin -e "LOAD ADMIN VARIABLES TO RUNTIME;"
    $proxyadmin -e "SAVE ADMIN VARIABLES TO DISK;"
 
-
-   $proxyadmin -e "UPDATE global_variables SET variable_value='${MONITOR_USER}' WHERE variable_name='mysql-monitor_username';"
+    $proxyadmin -e "UPDATE global_variables SET variable_value='${MONITOR_USER}' WHERE variable_name='mysql-monitor_username';"
     $proxyadmin -e "UPDATE global_variables SET variable_value='${MONITOR_PASSWORD}' WHERE variable_name='mysql-monitor_password';"
     $proxyadmin -e "LOAD MYSQL VARIABLES TO RUNTIME;"
     $proxyadmin -e "SAVE MYSQL VARIABLES TO DISK;"
-
 
     IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
     
@@ -203,7 +223,7 @@ else
         echo "######################################################"
         
         echo "cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} '/bin/bash'"
-        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
+        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} HTTP_PROXY=${HTTP_PROXY} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
 
     done
