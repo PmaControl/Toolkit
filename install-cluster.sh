@@ -125,6 +125,12 @@ echo "#################################################"
 
 
 
+<<<<<<< HEAD
+=======
+exit 0;
+
+
+>>>>>>> f41af971ce36e0ba15f7c4784503b2f14ceb5ad4
 whoami
 who=$(whoami)
 echo "whoami : ${who}"
@@ -229,7 +235,11 @@ echo "###################################################################"
 echo "###################################################################"
 echo "PROXYSQL START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo "###################################################################"
+<<<<<<< HEAD
 ./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${PROXYSQL_USER}" -r "${PROXYSQL_PASSWORD}" -y "${HTTP_PROXY}"
+=======
+./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${PROXYSQL_USER} -P "${PROXYSQL_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${PROXYSQL_USER}" -r "${PROXYSQL_PASSWORD}"
+>>>>>>> f41af971ce36e0ba15f7c4784503b2f14ceb5ad4
 echo "###################################################################"
 echo "PROXYSQL END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo "###################################################################"

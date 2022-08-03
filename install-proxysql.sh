@@ -89,6 +89,7 @@ then
         sudo='sudo'
     fi
 
+
     set +e
     $sudo apt update
     set -e
