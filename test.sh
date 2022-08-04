@@ -2,7 +2,7 @@
 
 
 # reset all server
-SERVERS='116,125,118,119,120'
+SERVERS='116,117,118,119,120'
 
 
 IFS=',' read -ra SERVER <<< "$SERVERS"
@@ -18,27 +18,23 @@ done
 
 
 ## reboot all server after roolback
-MARIADB_SERVERS='10.68.68.183,10.68.68.185,10.68.68.187,10.68.68.179,10.68.68.182'
-SSH_USER='root'
+#MARIADB_SERVERS='10.68.68.183,10.68.68.186,10.68.68.187,10.68.68.179,10.68.68.182'
+#SSH_USER='root'
 
-echo "debut() du sleep 30"
-sleep 20
+#IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
+#for mariadb in "${MARIADB_SERVER[@]}"; do
+#    echo "reboot ${SSH_USER}@${mariadb}"
+#    ssh ${SSH_USER}@${mariadb} "reboot" 2>&1 
+#done
+
+echo "debut du sleep 30"
+sleep 30
 echo "fin du sleep 30"
-
-
-IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
-for mariadb in "${MARIADB_SERVER[@]}"; do
-
-    echo "Reset server : ${mariadb}"
-    #ssh-keygen -f "/root/.ssh/known_hosts" -R "${mariadb}"
-    
-    #echo "reboot ${SSH_USER}@${mariadb}"
-    ssh ${SSH_USER}@${mariadb} "whoami" 2>&1 
-done
-
-
 
 # full install
 
 #./install-cluster.sh -m '10.68.68.183' -p '10.68.68.179,10.68.68.182' -o '10.114.5.13' -u root
-./install-cluster.sh -m '10.68.68.183,10.68.68.185,10.68.68.187' -p '10.68.68.179,10.68.68.182' -o '10.114.5.13' -u root -c 'Dalenys' -t cluster1_test
+./install-cluster.sh -m '10.68.68.183,10.68.68.186,10.68.68.187' -p '10.68.68.179,10.68.68.182' -o '10.114.5.13' -u root
+
+
+# ./install-cluster.sh -m '10.114.5.14,10.114.5.15,10.114.5.16' -p '10.114.5.12,10.114.5.13' -o '10.114.5.11' -u a_alequoy

@@ -41,20 +41,10 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
   esac
 done
 
-    echo "SSH_USER=${SSH_USER}"
-    echo "MARIADB_SERVERS=${MARIADB_SERVERS}"
-    echo "PROXYSQL_SERVERS=${PROXYSQL_SERVERS}"
-    echo "MYSQL_USER=${MYSQL_USER}"
-    echo "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
-    echo "SERVER_TO_INSTALL=${SERVER_TO_INSTALL}"
-    echo "PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}"
-    echo "PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}"
-    echo "MONITOR_USER=${MONITOR_USER}"
-    echo "MONITOR_PASSWORD=${MONITOR_PASSWORD}"
-    
+
 
   echo "#################################################"
-  echo "HTTP_PROXY : '${HTTP_PROXY}'"
+  #echo "HTTP_PROXY : '${HTTP_PROXY}'"
   echo "#################################################"
   sleep 1
 #echo "server : ${SERVER_TO_INSTALL}\n"
@@ -65,23 +55,6 @@ then
     who=$(whoami)
     echo "whoami : ${who}"
 
-
-    echo "SSH_USER=${SSH_USER}"
-    echo "MARIADB_SERVERS=${MARIADB_SERVERS}"
-    echo "PROXYSQL_SERVERS=${PROXYSQL_SERVERS}"
-    echo "MYSQL_USER=${MYSQL_USER}"
-    echo "MYSQL_PASSWORD=${MYSQL_PASSWORD}"
-    echo "SERVER_TO_INSTALL=${SERVER_TO_INSTALL}"
-    echo "PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}"
-    echo "PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}"
-    echo "MONITOR_USER=${MONITOR_USER}"
-    echo "MONITOR_PASSWORD=${MONITOR_PASSWORD}"
-
-    #if [[ "root" != "${who}" ]]
-    #then 
-    #    sudo -s
-    #fi
-
     sudo=''
     if [[ "${who}" != "root" ]]
     then
@@ -90,22 +63,26 @@ then
     fi
 
 
-    set +e
+    
     $sudo apt update
-    set -e
     $sudo apt upgrade -y
+
+    $sudo apt install -y ntp
+   
+    $sudo service ntp restart
+    sleep 1
 
     if [ ! -f "/etc/apt/sources.list.d/mariadb.list" ]
     then
+        echo "add repo mariadb"
+        echo "################"
         $sudo apt install -y curl
-        $sudo https_proxy=${HTTP_PROXY} curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
+        $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
+    else
+        echo "repo mariadb there !!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    
     fi
     
-    set +e
-    $sudo apt update
-    set -e
-
-
     $sudo apt install -y mariadb-client
 
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
@@ -123,7 +100,7 @@ then
     $sudo apt -y install lsb-release
     $sudo apt -y install nmap
 
-    sudo https_proxy="${HTTP_PROXY}" wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
+    wget -O - 'https://repo.proxysql.com/ProxySQL/repo_pub_key' | $sudo apt-key add -
 
     $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | $sudo tee /etc/apt/sources.list.d/proxysql.list
 
@@ -224,7 +201,7 @@ else
         echo "######################################################"
         
         echo "cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} '/bin/bash'"
-        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} HTTP_PROXY=${HTTP_PROXY} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
+        cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
 
     done
