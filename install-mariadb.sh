@@ -366,6 +366,8 @@ nice            = 0
 #
 # * Basic Settings
 #
+max_connections=1000
+innodb_autoextend_increment = 1000
 innodb_strict_mode=0
 sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 performance_schema=ON
@@ -404,7 +406,7 @@ log_error=${DATADIR}/log/error.log
 #
 # * Fine Tuning
 #
-max_connections         = 100
+max_connections         = 2000
 connect_timeout         = 5
 wait_timeout            = 600
 max_allowed_packet      = 16M
