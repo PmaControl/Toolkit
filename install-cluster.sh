@@ -337,6 +337,7 @@ EOF"
 
     res=$($sudo curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
     echo $res
+    sleep 1
 done
 
 echo "Insertion des serveurs ProxySQL :"
@@ -364,6 +365,7 @@ $sudo bash -c "cat > ${server_json} << EOF
 EOF"
     res=$($sudo curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
     echo $res
+    sleep 1
 done
 
 

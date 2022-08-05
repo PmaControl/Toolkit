@@ -369,6 +369,8 @@ nice            = 0
 innodb_strict_mode=0
 sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 performance_schema=ON
+connect_timeout=10
+innodb_rollback_on_timeout=1
 
 character-set-server  = utf8 
 collation-server      = utf8_general_ci 
