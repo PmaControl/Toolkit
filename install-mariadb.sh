@@ -69,14 +69,13 @@ function getProxy()
 {
   cat /etc/apt/apt.conf.d/* | { grep -E 'Acquire::https::proxy' | grep -Eo 'https?://.*([0-9]+|/)' || true;}
 }
-echo "g2"
+
 
 PROXY=$(getProxy)
 
 export http_proxy="${PROXY}"
-export https_proxy="${PROXY}""
+export https_proxy="${PROXY}"
 
-echo "g3"
 
 function purge {
  export DEBIAN_FRONTEND=noninteractive
