@@ -2,9 +2,7 @@
 set +x
 set -euo pipefail
 
-
-
-while getopts 'hm:p:u:P:s:U:y:' flag; do
+while getopts 'hm:p:u:P:s:U:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -16,60 +14,60 @@ while getopts 'hm:p:u:P:s:U:y:' flag; do
         echo "-u                      specify user for MySQL (dba account)"
         echo "-p                      specify password for MySQL (dba )"
         echo "-U                      specify user for SSH (default ROOT)"
-        echo "-a                      account for pmacontrol"
-        echo "-y                      proxy for connect to internet"
+        echo "-s                      server to install"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
     u) DBA_USER="${OPTARG}" ;;
     p) DBA_PASSWORD="${OPTARG}" ;;
     U) SSH_USER="${OPTARG}"   ;;
-    a) PMACONTROL_ACCOUNT ;;
-    x) PROXYSQL_ACCOUNT ;;
     s) SERVER_TO_INSTALL="${OPTARG}" ;;
-    y) HTTP_PROXY="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
   esac
 done
 
-if [[ ! -z "${SERVER_TO_INSTALL}" ]]
+function getProxy()
+{
+  cat /etc/apt/apt.conf.d/* | { grep -E 'Acquire::https::proxy' | grep -Eo 'https?://.*([0-9]+|/)' || true;}
+}
+
+
+if [[ -n "${SERVER_TO_INSTALL}" ]]
 then
 
-  who=$(whoami)
-  echo "~~~~~~~~~~~~~~~~ whoami : ${who}"
+  HTTP_PROXY=''
+  HTTP_PROXY=$(getProxy)
   
-sudo=''
-if [[ "${who}" != "root" ]]
-then
-	echo "Passage avec SUDO"
-	
-  sudo='sudo'
-fi
+  export http_proxy=${HTTP_PROXY}
+  export https_proxy=${HTTP_PROXY}
+
+  who=$(whoami)
+
+  sudo=''
+  if [[ "${who}" != "root" ]]
+  then
+    echo "Passage avec SUDO"
     
+    sudo="sudo http_proxy=${HTTP_PROXY} https_proxy=${HTTP_PROXY}"
+  fi
+
   echo "#################################################"
   echo "HTTP_PROXY : '${HTTP_PROXY}'"
   echo "#################################################"
-
-  echo "############### whoami : ${who}"
-
-
-
+  echo "WHOAMI : ${who}"
   echo "#########################################"
   echo "apt update"
   echo "#########################################"
 
-  set +e
   $sudo apt update
-  set -e
 
   echo "#########################################"
   echo "apt upgrade"
   echo "#########################################"
 
   $sudo apt -y upgrade
-
 
   echo "#########################################"
   echo "apt install ..."
@@ -82,34 +80,18 @@ fi
   $sudo apt install -y ntp
   $sudo apt install -y gdisk
   
-
-
   $sudo service ntp restart
   
   #$sudo apt install -y tee
 
   echo "GPT"
   printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk /dev/sdb
-
-#  $sudo sed -e 's/\s*\([\+0-9a-zA-Z]*\).*/\1/' << EOF | $sudo fdisk /dev/sdb
-#    o # clear the in memory partition table
-#    n # new partition
-#    p # primary partition
-#    1 # partition number 1
-#      # default - start at beginning of disk 
-#      # default, extend partition to end of disk
-#    p # print the in-memory partition table
-#    w # write the partition table
-#    q # and we're done
-#EOF
-
   $sudo mkfs.ext4 /dev/sdb1
 
   $sudo blkid /dev/sdb1
 
   blkid=$($sudo blkid /dev/sdb1 | cut -f 2 -d '=' | cut -f1 -d ' ')
 
-  #montage="UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0"
   echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" | $sudo tee -a /etc/fstab
 
   $sudo mount -a
@@ -126,14 +108,10 @@ fi
 
   pass=$($sudo openssl rand -base64 32)
 
-  ##HTTP_PROXY=${HTTP_PROXY}
-  $sudo ./install-mariadb.sh -v 10.7 -p $pass -d /srv/mysql -a "pmacontrol:hhh"
-
-
-  $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to ${DBA_USER}@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
+  $sudo ./install-mariadb.sh -v 10.7 -p "$pass" -d /srv/mysql
+  $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to '${DBA_USER}'@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
 else
-
     IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
     for mariadb in "${MARIADB_SERVER[@]}"; do
 
@@ -141,15 +119,6 @@ else
         echo "# Connect to ${mariadb}"
         echo "######################################################"
         
-        cat $0 | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} HTTP_PROXY=${HTTP_PROXY} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
-        #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
-        #pids[${mariadb}]=$!
+        cat "$0" | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
     done
-
-    #for pid in ${pids[*]}; do
-    #  echo "Waiting ..."
-    #  wait $pid
-    #  date
-    #  echo "END OF PID $pid"
-    #done
 fi

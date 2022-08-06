@@ -2,7 +2,7 @@
 set +x
 set -euo pipefail
 
-while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
+while getopts 'hm:p:u:P:s:U:a:b:o:r:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -32,7 +32,6 @@ while getopts 'hm:p:u:P:s:U:a:b:o:r:y:' flag; do
     b) PROXYSQLADMIN_PASSWORD="${OPTARG}" ;;
     o) MONITOR_USER="${OPTARG}" ;;
     r) MONITOR_PASSWORD="${OPTARG}" ;;
-    y) HTTP_PROXY="${OPTARG}" ;;
 
 
     *) echo "Unexpected option ${flag}" 
@@ -43,32 +42,36 @@ done
 
 
 
-  echo "#################################################"
-  #echo "HTTP_PROXY : '${HTTP_PROXY}'"
-  echo "#################################################"
-  sleep 1
 #echo "server : ${SERVER_TO_INSTALL}\n"
 
 if [[ ! -z "${SERVER_TO_INSTALL}" ]]
 then
-    whoami
-    who=$(whoami)
-    echo "whoami : ${who}"
 
+    HTTP_PROXY=''
+
+    function getProxy()
+    {
+        cat /etc/apt/apt.conf.d/* | { grep -E 'Acquire::https::proxy' | grep -Eo 'https?://.*([0-9]+|/)' || true;}
+    }
+
+    HTTP_PROXY=$(getProxy)
+
+    export http_proxy=${HTTP_PROXY}
+    export https_proxy=${HTTP_PROXY}
+
+    who=$(whoami)
+ 
     sudo=''
     if [[ "${who}" != "root" ]]
     then
         echo "Passage avec SUDO"
-        sudo='sudo'
+        
+        sudo="sudo https_proxy=${HTTP_PROXY} http_proxy=${HTTP_PROXY}"
     fi
-
-
     
     $sudo apt update
     $sudo apt upgrade -y
-
     $sudo apt install -y ntp
-   
     $sudo service ntp restart
     sleep 1
 
@@ -79,8 +82,7 @@ then
         $sudo apt install -y curl
         $sudo curl -LsS https://r.mariadb.com/downloads/mariadb_repo_setup | $sudo bash -s
     else
-        echo "repo mariadb there !!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    
+        echo "repo mariadb there !"
     fi
     
     $sudo apt install -y mariadb-client
@@ -197,10 +199,9 @@ else
     for proxysql in "${PROXYSQL_SERVER[@]}"; do
 
         echo "######################################################"
-        echo "# Connect to ${proxysql}"
+        echo "# Connect to ${proxysql} to install proxysql" 
         echo "######################################################"
         
-        echo "cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} '/bin/bash'"
         cat $0 | ssh ${SSH_USER}@${proxysql} SSH_USER=${SSH_USER} MARIADB_SERVERS=${MARIADB_SERVERS} PROXYSQL_SERVERS=${PROXYSQL_SERVERS} MYSQL_USER=${MYSQL_USER} MYSQL_PASSWORD=${MYSQL_PASSWORD} SERVER_TO_INSTALL=${proxysql} PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER} PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD} MONITOR_USER=${MONITOR_USER} MONITOR_PASSWORD=${MONITOR_PASSWORD} '/bin/bash'
         #ssh root@MachineB 'bash -s' < $0 $@ -s "${proxysql}"
 

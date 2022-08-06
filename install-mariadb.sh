@@ -21,13 +21,7 @@ DEBIAN_PASSWORD=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
 IP_PMACONTROL='localhost'
 ADD_TO_PMACONTROL='false'
 
-
-echo "#################################################"
-echo "BEFORE"
-echo "#################################################"
-sleep 1
-
-while getopts 'hp:n:m:xv:sgcud:rbx:y:a:' flag; do
+while getopts 'hp:n:m:xv:cud:rbx:y:a:' flag; do
   case "${flag}" in
     h) 
         echo "auto install mariadb"
@@ -38,7 +32,6 @@ while getopts 'hp:n:m:xv:sgcud:rbx:y:a:' flag; do
         echo "-n name                 specify the name of galera cluster"
         echo "-m ip1,ip2,ip3          specify the list of member of cluster"
         echo "-v 10.7                 specify the version of MariaDB"
-        echo "-s                      specify the hard drive are SSD"
         echo "-g                      specify to activate and make good set up for Spider"
         echo "-c                      set galera cluster ON"
         echo "-u                      [WARNING] purge previous version of MySQL / MariaDB"
@@ -55,8 +48,6 @@ while getopts 'hp:n:m:xv:sgcud:rbx:y:a:' flag; do
     n) CLUSTER_NAME="${OPTARG}" ;;
     m) CLUSTER_MEMBER="${OPTARG}" ;;
     v) VERSION="${OPTARG}" ;;
-    s) SSD='true';;
-    g) SPIDER='true';;
     c) CLUSTER='ON';;
     u) PURGE='true';;
     d) DATADIR="${OPTARG}";;
@@ -71,15 +62,21 @@ while getopts 'hp:n:m:xv:sgcud:rbx:y:a:' flag; do
   esac
 done
 
-echo "#################################################"
-echo "HTTP_PROXY : '${HTTP_PROXY}'"
-echo "#################################################"
-sleep 5
 
-export http_proxy=${HTTP_PROXY}
-export https_proxy=${HTTP_PROXY}
+echo "g"
 
-echo "PMA_ARG : $PMA_PARAM"
+function getProxy()
+{
+  cat /etc/apt/apt.conf.d/* | { grep -E 'Acquire::https::proxy' | grep -Eo 'https?://.*([0-9]+|/)' || true;}
+}
+echo "g2"
+
+PROXY=$(getProxy)
+
+export http_proxy="${PROXY}"
+export https_proxy="${PROXY}""
+
+echo "g3"
 
 function purge {
  export DEBIAN_FRONTEND=noninteractive
@@ -91,13 +88,10 @@ function purge {
  apt-get -qq clean
 }
 
-
-
 if [ "$PURGE" = "true" ]
 then
   purge
 fi
-
 
 function mytest {
     "$@"
