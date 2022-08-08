@@ -33,6 +33,8 @@ function getProxy()
   cat /etc/apt/apt.conf.d/* | { grep -E 'Acquire::https::proxy' | grep -Eo 'https?://.*([0-9]+|/)' || true;}
 }
 
+function isDevMounted () { findmnt --source "$1" >/dev/null;}
+
 
 if [[ -n "${SERVER_TO_INSTALL}" ]]
 then
@@ -60,7 +62,11 @@ then
   echo "#########################################"
   echo "apt update"
   echo "#########################################"
+  $sudo apt install -y ntp
+  $sudo service ntp restart
 
+
+  sleep 1
   $sudo apt update
 
   echo "#########################################"
@@ -77,20 +83,36 @@ then
   $sudo apt install -y git
   $sudo apt install -y tig
   $sudo apt install -y wget
-  $sudo apt install -y ntp
   $sudo apt install -y gdisk
-  
-  $sudo service ntp restart
   
   #$sudo apt install -y tee
 
-  echo "GPT"
-  printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk /dev/sdb
-  $sudo mkfs.ext4 /dev/sdb1
+  DEVTARGET='/dev/sdb1'
 
-  $sudo blkid /dev/sdb1
+  df -h
 
-  blkid=$($sudo blkid /dev/sdb1 | cut -f 2 -d '=' | cut -f1 -d ' ')
+  # Patch for PROXMOX test (sometime /dev/sdb1 is used instead of /dev/sda1 for / after a rollback of snapshot)
+  if  isDevMounted "${DEVTARGET}";
+  then 
+        echo "#########################"
+        echo "device is mounted"
+        echo "#########################"
+        DEVTARGET='/dev/sda1'
+  else 
+      echo "device is not mounted"
+      echo "OK GOOD !!!!!"
+  fi
+
+  echo "GPT ---------------------------->"
+
+  TRI=${DEVTARGET::-1}
+
+  printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk "${TRI}"
+  $sudo mkfs.ext4 "${DEVTARGET}"
+
+  $sudo blkid "${DEVTARGET}"
+
+  blkid=$($sudo blkid "${DEVTARGET}" | cut -f 2 -d '=' | cut -f1 -d ' ')
 
   echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" | $sudo tee -a /etc/fstab
 

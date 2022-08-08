@@ -69,11 +69,14 @@ then
         sudo="sudo https_proxy=${HTTP_PROXY} http_proxy=${HTTP_PROXY}"
     fi
     
-    $sudo apt update
-    $sudo apt upgrade -y
     $sudo apt install -y ntp
     $sudo service ntp restart
     sleep 1
+
+
+    $sudo apt update
+    $sudo apt upgrade -y
+
 
     if [ ! -f "/etc/apt/sources.list.d/mariadb.list" ]
     then

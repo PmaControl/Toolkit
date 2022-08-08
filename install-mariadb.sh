@@ -359,19 +359,19 @@ nice            = 0
 #
 # * Basic Settings
 #
-max_connections=1000
+
 innodb_autoextend_increment = 1000
 innodb_strict_mode=0
 sql_mode=NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
 performance_schema=ON
 connect_timeout=10
 innodb_rollback_on_timeout=1
+wait_timeout=18000
 
-character-set-server  = utf8 
-collation-server      = utf8_general_ci 
-character_set_server   = utf8 
-collation_server       = utf8_general_ci
-
+character-set-server  = utf8mb4 
+collation-server      = utf8mb4_general_ci 
+character_set_server   = utf8mb4
+collation-server = utf8mb4_general_ci
 #innodb_force_recovery = 1
 
 user            = mysql
@@ -399,8 +399,8 @@ log_error=${DATADIR}/log/error.log
 #
 # * Fine Tuning
 #
-max_connections         = 2000
-connect_timeout         = 5
+max_connections         = 1000
+connect_timeout         = 10
 wait_timeout            = 600
 max_allowed_packet      = 16M
 thread_cache_size       = 128
