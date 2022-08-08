@@ -262,50 +262,24 @@ rm -rf "${tmp_file}"
 rm -rf "${error_mysql}"
 
 echo "INSERT INTO PMACONTROL"
-PMACONTROL_WEBSERVICE_USER=$(openssl rand -base64 16)
-PMACONTROL_WEBSERVICE_PASSWORD=$(openssl rand -base64 32)
+echo "Insertion des serveurs :"
 
-webservice=$(mktemp)
-secret=$(mktemp)
-
-
-echo "user=${PMACONTROL_WEBSERVICE_USER}:${PMACONTROL_WEBSERVICE_PASSWORD}" > "$secret"
+path_import='import'
+$sudo mkdir -p $path_import
 
 
-cat > "${webservice}" << EOF
-{
-"webservice": [{
-    "user": "${PMACONTROL_WEBSERVICE_USER}",
-    "host": "%",
-    "password": "${PMACONTROL_WEBSERVICE_PASSWORD}",
-    "organization": "Dalenys"
-  }]
-}
-EOF
+pmacontrol=$(whereis pmacontrol | cut -d ' ' -f2)
 
-echo "ajout du compte webservice"
-cd /srv/www/pmacontrol && $sudo ./glial administration all --debug
-cd /srv/www/pmacontrol && $sudo ./glial Webservice addAccount "${webservice}" --debug
+SERVERS="$MARIADB_SERVERS,$PROXYSQL_SERVERS"
+IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
+for server in "${ALL_SERVER[@]}"; do
 
+	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}.json"
 
-echo "Insertion des serveurs MariaDB :"
-
-
-    path_import='/srv/www/pmacontrol/configuration/import'
-    $sudo mkdir -p $path_import
-
-
-
-
-IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
-for mariadb in "${MARIADB_SERVER[@]}"; do
-
-server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}-mariadb.json"
-
-$sudo bash -c "cat > ${server_json} << EOF
+	$sudo bash -c "cat > ${server_json} << EOF
 {
     \"mysql\": [{
-            \"fqdn\": \"${mariadb}\",
+            \"fqdn\": \"${server}\",
             \"display_name\": \"@hostname\",
             \"port\": \"3306\",
             \"login\": \"${PMACONTROL_USER}\",
@@ -318,52 +292,8 @@ $sudo bash -c "cat > ${server_json} << EOF
     }]
 }
 EOF"
+	$pmacontrol Webservice importFile "${server_json}"	
 
-	res=$($sudo curl -v -K "${secret}" -F "conf=@${server_json}" "http://127.0.0.1/pmacontrol/en/webservice/pushServer")
-    #res=$($sudo curl --insecure -v -K ${secret} -F "conf=@${server_json}" "https://127.0.0.1/en/webservice/pushServer")
-    echo "$res"
-    sleep 1
-done
-
-echo "Insertion des serveurs ProxySQL :"
-
-IFS=',' read -ra PROXYSQL_SERVER <<< "$PROXYSQL_SERVERS"
-for proxysql in "${PROXYSQL_SERVER[@]}"; do
-
-server_json="${path_import}/${ENVIRONMENT}-${TAG}-${proxysql}-proxy.json"
-
-$sudo bash -c "cat > ${server_json} << EOF
-{
-    \"mysql\": [{
-            \"fqdn\": \"${proxysql}\",
-            \"display_name\": \"@hostname\",
-            \"port\": \"6033\",
-            \"login\": \"${PMACONTROL_USER}\",
-            \"password\": \"${PMACONTROL_PASSWORD}\",
-            \"tag\": [\"${TAG}\"],
-            \"organization\": \"${CLIENT}\",
-            \"environment\": \"${ENVIRONMENT}\",
-            \"ssh_ip\": \"${proxysql}\",
-            \"ssh_port\": \"22\"
-    }]
-}
-EOF"
-
-
-#    code=$(curl --write-out %{http_code} --silent --output /dev/null http://127.0.0.1/pmacontrol/en/webservice/pushServer)
-#    code2=$(curl --write-out %{http_code} --silent --output /dev/null http://127.0.0.1/pmacontrol/en/webservice/pushServer)
-#    code3=$(curl --write-out %{http_code} --silent --output /dev/null http://127.0.0.1/en/webservice/pushServer)
-#    code4=$(curl --write-out %{http_code} --silent --output /dev/null http://127.0.0.1/en/webservice/pushServer)
-
-
-
-
-
-	
-
-    res=$($sudo curl -v -K "${secret}" -F "conf=@${server_json}" "http://127.0.0.1/pmacontrol/en/webservice/pushServer")
-    echo "$res"
-    sleep 1
 done
 
 
