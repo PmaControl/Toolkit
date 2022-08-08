@@ -270,12 +270,13 @@ $sudo mkdir -p $path_import
 
 pmacontrol=$(whereis pmacontrol | cut -d ' ' -f2)
 
-SERVERS="$MARIADB_SERVERS,$PROXYSQL_SERVERS"
+
+
+
+SERVERS="$MARIADB_SERVERS"
 IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
 for server in "${ALL_SERVER[@]}"; do
-
 	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}.json"
-
 	$sudo bash -c "cat > ${server_json} << EOF
 {
     \"mysql\": [{
@@ -293,7 +294,30 @@ for server in "${ALL_SERVER[@]}"; do
 }
 EOF"
 	$pmacontrol Webservice importFile "${server_json}"	
+done
 
+
+SERVERS="$PROXYSQL_SERVERS"
+IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
+for server in "${ALL_SERVER[@]}"; do
+	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}.json"
+	$sudo bash -c "cat > ${server_json} << EOF
+{
+    \"mysql\": [{
+            \"fqdn\": \"${server}\",
+            \"display_name\": \"@hostname\",
+            \"port\": \"6033\",
+            \"login\": \"${PMACONTROL_USER}\",
+            \"password\": \"${PMACONTROL_PASSWORD}\",
+            \"tag\": [\"${TAG}\"],
+            \"organization\": \"${CLIENT}\",
+            \"environment\": \"${ENVIRONMENT}\",
+            \"ssh_ip\": \"${mariadb}\",
+            \"ssh_port\": \"22\"
+    }]
+}
+EOF"
+	$pmacontrol Webservice importFile "${server_json}"	
 done
 
 
