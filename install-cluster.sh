@@ -5,14 +5,14 @@ set -euo pipefail
 tmp_file=$(mktemp)
 error_mysql=$(mktemp)
 DEBUG="true"
-
+PUSH_CONFIG=false
 
 path=${BASH_SOURCE%/*}
 source "${path}/lib/6t-mysql-client.sh"
 source "${path}/lib/6t-debug.sh"
 
 
-while getopts 'hm:p:o:t:u:s:c:e:' flag; do
+while getopts 'hm:p:o:t:u:s:c:e:f' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -23,11 +23,12 @@ while getopts 'hm:p:o:t:u:s:c:e:' flag; do
         echo "-m ip1,ip2,ip3          specify the list of mysql server coma separated"
         echo "-p ip1,ip2              specify the list of proxysql server"
         echo "-o                      specify the list of mysql orchestrator"
+        echo "-u                      user ssh to install (must be sudo without password)"
         echo "-t                      tags"
         echo "-s                      server source"
         echo "-c                      client"
         echo "-e                      environment"
-        echo "-y                      proxy to get internet"
+        echo "-f                      conFig only, will refresh replication, config to MariaDB & ProxySQL and push to PmaControl"
 
         exit 0
     ;;
@@ -39,6 +40,7 @@ while getopts 'hm:p:o:t:u:s:c:e:' flag; do
     s) SERVER_SOURCE="${OPTARG}" ;;
     c) CLIENT="${OPTARG}" ;;
     e) ENVIRONMENT="${OPTARG}" ;;
+    f) PUSH_CONFIG=true ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
@@ -137,8 +139,10 @@ echo "#########################################"
 echo "Install MariaDB Server"
 echo "#########################################"
 
+if [ "$PUSH_CONFIG" = false ] ; then
+    ./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+fi
 
-./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
 
 set +x
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
@@ -155,8 +159,6 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     #TODO add each IP to replication slave
     mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';"
     
-
-    # ssh ${SSH_USER}@${mariadb} "mysql -e " 2>&1 
 done
 
 # set up replication 
@@ -213,7 +215,10 @@ echo "###################################################################"
 echo "PROXYSQL START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo "###################################################################"
 
-./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${MONITOR_USER} -P "${MONITOR_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${MONITOR_USER}" -r "${MONITOR_PASSWORD}"
+if [ "$PUSH_CONFIG" = false ] ; then
+    ./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${MONITOR_USER} -P "${MONITOR_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${MONITOR_USER}" -r "${MONITOR_PASSWORD}"
+fi
+
 
 echo "###################################################################"
 echo "PROXYSQL END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"

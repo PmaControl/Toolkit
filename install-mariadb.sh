@@ -368,7 +368,6 @@ connect_timeout=10
 innodb_rollback_on_timeout=1
 wait_timeout=18000
 
-
 plugin-load=server_audit=server_audit.so
 
 server_audit_logging=1
@@ -384,8 +383,6 @@ server_audit_output_type=FILE
 server_audit_file_path=${DATADIR}/log/audit.log
 server_audit_file_rotate_size=1000000
 server_audit_file_rotations=9
-
-
 
 character-set-server  = utf8mb4 
 collation-server      = utf8mb4_general_ci 
