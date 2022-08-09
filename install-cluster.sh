@@ -261,17 +261,12 @@ echo ""
 rm -rf "${tmp_file}"
 rm -rf "${error_mysql}"
 
-echo "INSERT INTO PMACONTROL"
-echo "Insertion des serveurs :"
+echo "ADD SERVERS TO PMACONTROL"
 
 path_import='import'
 $sudo mkdir -p $path_import
 
-
 pmacontrol=$(whereis pmacontrol | cut -d ' ' -f2)
-
-
-
 
 SERVERS="$MARIADB_SERVERS"
 IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
@@ -293,7 +288,8 @@ for server in "${ALL_SERVER[@]}"; do
     }]
 }
 EOF"
-	$pmacontrol Webservice importFile "${server_json}"	
+    echo "import file : ${server_json}"
+	$sudo $pmacontrol Webservice importFile "${server_json}"	
 done
 
 
@@ -317,7 +313,8 @@ for server in "${ALL_SERVER[@]}"; do
     }]
 }
 EOF"
-	$pmacontrol Webservice importFile "${server_json}"	
+    echo "import file : ${server_json}"
+	$sudo $pmacontrol Webservice importFile "${server_json}"	
 done
 
 
