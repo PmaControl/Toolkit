@@ -8,6 +8,9 @@ DEBUG="true"
 PUSH_CONFIG=false
 
 path=${BASH_SOURCE%/*}
+
+echo "PWD : $path"
+
 source "${path}/lib/6t-mysql-client.sh"
 source "${path}/lib/6t-debug.sh"
 
@@ -173,8 +176,8 @@ mysql -h "${MASTER}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS
 mysql_user=${DBA_USER}
 mysql_password=${DBA_PASSWORD}
 
-$sudo ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
-$sudo ct_mysql_parse
+ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
+ct_mysql_parse
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
@@ -190,19 +193,15 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
         mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
         mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "set global read_only=1;"
     else
-
-
-        $sudo ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
-        $sudo ct_mysql_parse
+        ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
+        ct_mysql_parse
 
         HASH_PMACONTROL=${MYSQL_PASSWORD_1}
 
-        $sudo ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
-        $sudo ct_mysql_parse
-
+        ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
+        ct_mysql_parse
 
         MYSQL_VERSION=${MYSQL_VERSION_1}
-
     fi
 done
 echo "###################################################################"
