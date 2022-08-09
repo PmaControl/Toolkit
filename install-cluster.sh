@@ -171,8 +171,8 @@ mysql -h "${MASTER}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS
 mysql_user=${DBA_USER}
 mysql_password=${DBA_PASSWORD}
 
-ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
-ct_mysql_parse
+$sudo ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
+$sudo ct_mysql_parse
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
@@ -190,13 +190,13 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
     else
 
 
-        ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
-        ct_mysql_parse
+        $sudo ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
+        $sudo ct_mysql_parse
 
         HASH_PMACONTROL=${MYSQL_PASSWORD_1}
 
-        ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
-        ct_mysql_parse
+        $sudo ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
+        $sudo ct_mysql_parse
 
 
         MYSQL_VERSION=${MYSQL_VERSION_1}

@@ -89,34 +89,22 @@ then
 
   DEVTARGET='/dev/sdb1'
 
-  df -h
-
-  # Patch for PROXMOX test (sometime /dev/sdb1 is used instead of /dev/sda1 for / after a rollback of snapshot)
   if  isDevMounted "${DEVTARGET}";
   then 
         echo "#########################"
         echo "device is mounted"
         echo "#########################"
-        DEVTARGET='/dev/sda1'
+        df -h
   else 
-      echo "device is not mounted"
-      echo "OK GOOD !!!!!"
+        echo "GPT ---------------------------->"
+        TRI=${DEVTARGET::-1}
+        printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk "${TRI}"
+        $sudo mkfs.ext4 "${DEVTARGET}"
+        $sudo blkid "${DEVTARGET}"
+        blkid=$($sudo blkid "${DEVTARGET}" | cut -f 2 -d '=' | cut -f1 -d ' ')
+        echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" | $sudo tee -a /etc/fstab
+        $sudo mount -a
   fi
-
-  echo "GPT ---------------------------->"
-
-  TRI=${DEVTARGET::-1}
-
-  printf 'n\n\n\n\n\nw\ny\n' | $sudo gdisk "${TRI}"
-  $sudo mkfs.ext4 "${DEVTARGET}"
-
-  $sudo blkid "${DEVTARGET}"
-
-  blkid=$($sudo blkid "${DEVTARGET}" | cut -f 2 -d '=' | cut -f1 -d ' ')
-
-  echo "UUID=${blkid} /srv        ext4    rw,noatime,nodiratime,nobarrier,data=ordered 0 0" | $sudo tee -a /etc/fstab
-
-  $sudo mount -a
 
   cd /srv
   $sudo mkdir -p code
