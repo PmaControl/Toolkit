@@ -176,8 +176,8 @@ EOF"
     echo "Test mysql account for ProxySQL"
     for i in "${MARIADB_SERVER[@]}"; do
 
-       $proxyadmin -e "INSERT INTO mysql_servers VALUES(10,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server and write server');"
-       $proxyadmin -e "INSERT INTO mysql_servers VALUES(20,'${i}',3306,0,'ONLINE',1,0,100,10,0,0,'read server');"
+       $proxyadmin -e "INSERT INTO mysql_servers VALUES(10,'${i}',3306,0,'ONLINE',1,0,1000,10,0,0,'read server and write server');"
+       $proxyadmin -e "INSERT INTO mysql_servers VALUES(20,'${i}',3306,0,'ONLINE',1,0,1000,10,0,0,'read server');"
     done
 
    $proxyadmin -e "INSERT INTO mysql_replication_hostgroups (writer_hostgroup, reader_hostgroup, comment) VALUES (10, 20, 'Master / Slave');"

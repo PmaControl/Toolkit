@@ -276,7 +276,7 @@ pmacontrol=$(whereis pmacontrol | cut -d ' ' -f2)
 SERVERS="$MARIADB_SERVERS"
 IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
 for server in "${ALL_SERVER[@]}"; do
-	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}.json"
+	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${server}.json"
 	$sudo bash -c "cat > ${server_json} << EOF
 {
     \"mysql\": [{
@@ -288,7 +288,7 @@ for server in "${ALL_SERVER[@]}"; do
             \"tag\": [\"${TAG}\"],
             \"organization\": \"${CLIENT}\",
             \"environment\": \"${ENVIRONMENT}\",
-            \"ssh_ip\": \"${mariadb}\",
+            \"ssh_ip\": \"${server}\",
             \"ssh_port\": \"22\"
     }]
 }
@@ -300,7 +300,7 @@ done
 SERVERS="$PROXYSQL_SERVERS"
 IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
 for server in "${ALL_SERVER[@]}"; do
-	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${mariadb}.json"
+	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${server}.json"
 	$sudo bash -c "cat > ${server_json} << EOF
 {
     \"mysql\": [{
@@ -312,7 +312,7 @@ for server in "${ALL_SERVER[@]}"; do
             \"tag\": [\"${TAG}\"],
             \"organization\": \"${CLIENT}\",
             \"environment\": \"${ENVIRONMENT}\",
-            \"ssh_ip\": \"${mariadb}\",
+            \"ssh_ip\": \"${server}\",
             \"ssh_port\": \"22\"
     }]
 }
