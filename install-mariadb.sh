@@ -488,7 +488,9 @@ log_bin_index          = $DATADIR/binlog/mariadb-bin.index
 # not fab for performance, but safer
 #sync_binlog            = 1
 expire_logs_days        = 10
-max_binlog_size         = 1G
+
+#to be more easy for SHOW BINLOG EVENTS (1G => 100M)
+max_binlog_size         = 100M
 
 # slaves
 relay_log              = ${DATADIR}/relaylog/relay-bin
