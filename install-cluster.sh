@@ -322,11 +322,14 @@ SERVERS="$PROXYSQL_SERVERS"
 IFS=',' read -ra ALL_SERVER <<< "$SERVERS"
 for server in "${ALL_SERVER[@]}"; do
 	server_json="${path_import}/${ENVIRONMENT}-${TAG}-${server}.json"
+
+    HOSTNAME=$($sudo ssh "${SSH_USER}"@"${server}" "hostname")
+
 	$sudo bash -c "cat > ${server_json} << EOF
 {
     \"mysql\": [{
             \"fqdn\": \"${server}\",
-            \"display_name\": \"@hostname\",
+            \"display_name\": \"${HOSTNAME}\",
             \"port\": \"6033\",
             \"login\": \"${PMACONTROL_USER}\",
             \"password\": \"${PMACONTROL_PASSWORD}\",
