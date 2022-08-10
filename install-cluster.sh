@@ -137,14 +137,17 @@ for server in "${SERVERS[@]}"; do
     echo "connect to ${SSH_USER}@${server}"
 
     #add finger print
-    ssh-keygen -F ${server} 2>/dev/null 1>/dev/null
-    if [ $? -eq 0 ]; then
+    res=$(ssh-keygen -F ${server} 2>/dev/null 1>/dev/null && echo "found" || echo "not found")
+    if [ "${res}" = "found" ]; then
         echo "${server} is already known"
     else
         echo "${server} add to fingerprint"
         #ssh-keyscan -t rsa -T 10 $address >> ~/.ssh/known_hosts
         ssh-keyscan -H "${server}" >> ~/.ssh/known_hosts
     fi
+
+    #remove finger print
+    # ssh-keygen -f ~/.ssh/known_hosts -R "${server}"
 
     ssh "${SSH_USER}"@"${server}" "whoami" 2>&1 
 done
