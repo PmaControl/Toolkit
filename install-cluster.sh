@@ -135,22 +135,37 @@ fi
 IFS=',' read -ra SERVERS <<< "${MARIADB_SERVERS},${PROXYSQL_SERVERS}"
 for server in "${SERVERS[@]}"; do
     echo "connect to ${SSH_USER}@${server}"
+
+    #add finger print
+    ssh-keygen -F $address 2>/dev/null 1>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "$address is already known"
+    else
+        echo "$address add to fingerprint"
+        #ssh-keyscan -t rsa -T 10 $address >> ~/.ssh/known_hosts
+        ssh-keyscan -H "${address}" >> ~/.ssh/known_hosts
+    fi
+
     ssh "${SSH_USER}"@"${server}" "whoami" 2>&1 
 done
 
-echo "#########################################"
-echo "Install MariaDB Server"
-echo "#########################################"
 
 if [ "$PUSH_CONFIG" = false ] ; then
+    echo "#########################################"
+    echo "Install MariaDB Server"
+    echo "#########################################"
     ./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+
+    echo "#########################################"
+    echo "End install MariaDB Server"
+    echo "#########################################"
 fi
 
-
-set +x
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
     echo "create user to ${SSH_USER}@${mariadb}"
+
+    nmap ${mariadb} -p 3306
 
     mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT ALL ON *.* to '${PMACONTROL_USER}'@'%' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
     
@@ -210,18 +225,21 @@ echo "###################################################################"
 
 
 
-echo "###################################################################"
-echo "PROXYSQL START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-echo "###################################################################"
+
 
 if [ "$PUSH_CONFIG" = false ] ; then
+    echo "###################################################################"
+    echo "PROXYSQL START !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "###################################################################"
     ./install-proxysql.sh -p "${PROXYSQL_SERVERS}" -m "${MARIADB_SERVERS}" -u ${MONITOR_USER} -P "${MONITOR_PASSWORD}" -s '' -U "${SSH_USER}" -a "${PROXYSQLADMIN_USER}" -b "${PROXYSQLADMIN_PASSWORD}" -o "${MONITOR_USER}" -r "${MONITOR_PASSWORD}"
+
+    echo "###################################################################"
+    echo "PROXYSQL END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    echo "###################################################################"
 fi
 
 
-echo "###################################################################"
-echo "PROXYSQL END !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-echo "###################################################################"
+
 
 # TODO : take in consideration of all server are not in same /24
 #ip1=$(hostname -I | cut -d' ' -f1 | cut -f 1 -d ".")

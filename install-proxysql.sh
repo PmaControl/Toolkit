@@ -73,10 +73,8 @@ then
     $sudo service ntp restart
     sleep 1
 
-
     $sudo apt update
     $sudo apt upgrade -y
-
 
     if [ ! -f "/etc/apt/sources.list.d/mariadb.list" ]
     then
@@ -109,9 +107,8 @@ then
 
     $sudo echo deb https://repo.proxysql.com/ProxySQL/proxysql-2.3.x/$(lsb_release -sc)/ ./ | $sudo tee /etc/apt/sources.list.d/proxysql.list
 
-    set +e
+
     $sudo apt update
-    set -e
     $sudo apt-get install proxysql
 
     echo "Proxysql SQL installed"
@@ -119,13 +116,13 @@ then
     $sudo systemctl start proxysql
 
     echo "Proxysql SQL up & running"
+    $sudo sleep 2
+    echo "end sleep 2"
+
 
     $sudo ip a
     $sudo nmap localhost -p 6032
     $sudo nmap $SERVER_TO_INSTALL -p 6032
-
-    $sudo sleep 10
-    echo "end sleep 10"
 
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "UPDATE global_variables SET variable_value='${PROXYSQLADMIN_USER}:${PROXYSQLADMIN_PASSWORD}' WHERE variable_name='admin-admin_credentials';"
     mysql -h 127.0.0.1 -u admin -padmin -P 6032 -e "SAVE ADMIN VARIABLES TO DISK;"
