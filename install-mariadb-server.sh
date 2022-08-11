@@ -60,10 +60,13 @@ then
   echo "#################################################"
   echo "WHOAMI : ${who}"
   echo "#########################################"
-  echo "apt update"
+  echo "apt install NTP"
   echo "#########################################"
   $sudo apt install -y ntp
-  $sudo service ntp restart
+
+  $sudo service ntp stop
+  $sudo ntpd -gq
+  $sudo service ntp start
 
 
   sleep 1
