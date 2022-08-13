@@ -82,7 +82,7 @@ then
   echo "apt install ..."
   echo "#########################################"
 
-  $sudo apt install -y fdisk
+  #$sudo apt install -y fdisk
   $sudo apt install -y git
   $sudo apt install -y tig
   $sudo apt install -y wget
@@ -132,6 +132,6 @@ else
         echo "# Connect to ${mariadb}"
         echo "######################################################"
         
-        cat "$0" | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS=${MARIADB_SERVERS} SERVER_TO_INSTALL=${mariadb} DBA_USER=${DBA_USER} DBA_PASSWORD=${DBA_PASSWORD} '/bin/bash'
+        cat "$0" | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS="${MARIADB_SERVERS}" SERVER_TO_INSTALL="${mariadb}" DBA_USER="${DBA_USER}" DBA_PASSWORD="${DBA_PASSWORD}" '/bin/bash'
     done
 fi
