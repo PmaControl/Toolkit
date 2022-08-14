@@ -70,7 +70,9 @@ then
     fi
     
     $sudo apt install -y ntp
-    $sudo service ntp restart
+    $sudo service ntp stop
+    $sudo ntpd -gq
+    $sudo service ntp start
     sleep 1
 
     $sudo apt update
