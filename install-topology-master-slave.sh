@@ -2,6 +2,9 @@
 set +x
 set -euo pipefail
 
+
+
+
 tmp_file=$(mktemp)
 error_mysql=$(mktemp)
 DEBUG="true"
@@ -11,11 +14,14 @@ path=${BASH_SOURCE%/*}
 
 echo "PWD : $path"
 
+
+source "${path}/lib/6t-include.sh"
+
 source "${path}/lib/6t-mysql-client.sh"
 source "${path}/lib/6t-debug.sh"
 
 
-while getopts 'hm:p:o:t:u:s:c:e:f' flag; do
+while getopts 'hm:p:o:t:u:s:c:e:fv:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
@@ -32,7 +38,8 @@ while getopts 'hm:p:o:t:u:s:c:e:f' flag; do
         echo "-c                      client"
         echo "-e                      environment"
         echo "-f                      conFig only, will refresh replication, config to MariaDB & ProxySQL and push to PmaControl"
-
+        echo "-v                      version of MariaDB / MySQL"
+        echo "-V                      version of ProxySQL"
         exit 0
     ;;
     m) MARIADB_SERVERS="${OPTARG}" ;;
@@ -44,11 +51,80 @@ while getopts 'hm:p:o:t:u:s:c:e:f' flag; do
     c) CLIENT="${OPTARG}" ;;
     e) ENVIRONMENT="${OPTARG}" ;;
     f) PUSH_CONFIG=true ;;
+    v) VERSION_MARIADB="${OPTARG}" ;;
     *) echo "Unexpected option ${flag}" 
 	exit 0
     ;;
   esac
 done
+
+
+PATH_DIRECTORY_PASSWORD='password'
+MD5=$(md5sum <<<"$0" | cut -d ' ' -f 1)
+echo "MD5 : ${MD5}" 
+
+mkdir -p ${PATH_DIRECTORY_PASSWORD}
+password_file="${PATH_DIRECTORY_PASSWORD}/${CLIENT}-${ENVIRONMENT}-${TAG}-${MD5}.secret"
+
+if [ ! -f "${password_file}" ]
+then
+    echo "File does not exist in Bash"
+    PMACONTROL_USER="pmacontrol"
+    PMACONTROL_PASSWORD=$(openssl rand -base64 32)
+
+    MONITOR_USER="monitor"
+    MONITOR_PASSWORD=$(openssl rand -base64 32)
+
+    REPLICATION_USER="replication_slave"
+    REPLICATION_PASSWORD=$(openssl rand -base64 32)
+
+    PROXYSQLADMIN_USER="proxysql"
+    PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32)
+
+    DBA_USER="dba"
+    DBA_PASSWORD=$(openssl rand -base64 32)
+
+
+    cat > "${password_file}" << EOF
+#!/bin/bash
+# MYSQL ACCOUNT
+PMACONTROL_USER=${PMACONTROL_USER}
+PMACONTROL_PASSWORD=${PMACONTROL_PASSWORD}
+MONITOR_USER=${MONITOR_USER}
+MONITOR_PASSWORD=${MONITOR_PASSWORD}
+REPLICATION_USER=${REPLICATION_USER}
+REPLICATION_PASSWORD=${REPLICATION_PASSWORD}
+DBA_USER=${DBA_USER}
+DBA_PASSWORD=${DBA_PASSWORD}
+# PROXYSQL ADMIN 
+PROXYSQLADMIN_USER=${PROXYSQLADMIN_USER}
+PROXYSQLADMIN_PASSWORD=${PROXYSQLADMIN_PASSWORD}
+EOF
+
+
+else
+    echo "File found. Do something meaningful here"
+    source "${password_file}"
+fi
+
+
+echo "#################################################"
+echo "# PASSWORD GENERATION "
+echo "#################################################"
+echo ""
+echo "#################################################"
+echo "MySQL"
+echo "#################################################"
+echo "PmaControl         : ${PMACONTROL_USER} // ${PMACONTROL_PASSWORD}"
+echo "Monitor (ProxySQL) : ${MONITOR_USER} // ${MONITOR_PASSWORD}"
+echo "Replication        : ${REPLICATION_USER} // ${REPLICATION_PASSWORD}"
+echo "DBA                : ${DBA_USER} // ${DBA_PASSWORD}"
+echo ""
+echo "#################################################"
+echo "ProxySQL Admin"
+echo "#################################################"
+echo "ProxySQL ADMIN : ${PROXYSQLADMIN_USER} // ${PROXYSQLADMIN_PASSWORD}"
+echo ""
 
 
 PATH_DIRECTORY_PASSWORD='password'
@@ -140,7 +216,7 @@ for server in "${SERVERS[@]}"; do
     # ssh-keygen -f ~/.ssh/known_hosts -R "${server}"
 
     #add finger print
-    res=$(ssh-keygen -F ${server} 2>/dev/null 1>/dev/null && echo "found" || echo "not found")
+    res=$(ssh-keygen -F "${server}" 2>/dev/null 1>/dev/null && echo "found" || echo "not found")
     if [ "${res}" = "found" ]; then
         echo "${server} is already known"
     else
@@ -154,27 +230,42 @@ done
 
 
 if [ "$PUSH_CONFIG" = false ] ; then
-    echo "#########################################"
+    echo "+++++++++++++++++++++++++++++++++++++++++++++"
     echo "Install MariaDB Server"
-    echo "#########################################"
-    ./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+    echo "+++++++++++++++++++++++++++++++++++++++++++++"
 
-    echo "#########################################"
+    #tmp_file=$(./build.sh install-mariadb-server-v2.sh)
+    #chmod +x "${tmp_file}"
+
+    IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
+    for mariadb in "${MARIADB_SERVER[@]}"; do
+
+        echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+        echo "Install MariaDB on : ${mariadb}"
+        echo "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%"
+
+        cat install-mariadb-server-v2.sh | ssh ${SSH_USER}@${mariadb} MARIADB_SERVERS="${MARIADB_SERVERS}" SERVER_TO_INSTALL="${mariadb}" DBA_USER="${DBA_USER}" DBA_PASSWORD="${DBA_PASSWORD}" VERSION_MARIADB="${VERSION_MARIADB}" '/bin/bash'
+        #bash "install-mariadb-server-v2.sh -m "${mariadb}" -U "${SSH_USER}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -v 10.8
+
+        
+    done
+
+    echo "+++++++++++++++++++++++++++++++++++++++++++++"
     echo "End install MariaDB Server"
-    echo "#########################################"
+    echo "+++++++++++++++++++++++++++++++++++++++++++++"
 fi
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
     echo "create user to ${SSH_USER}@${mariadb}"
 
-    nmap ${mariadb} -p 3306
+    nmap "${mariadb}" -p 3306
 
     mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT ALL ON *.* to '${PMACONTROL_USER}'@'%' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
     
     # boucle proxy
 
-    mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT USAGE,SLAVE MONITOR ON *.* to '${MONITOR_USER}'@'%' IDENTIFIED BY '${MONITOR_PASSWORD}' WITH GRANT OPTION;"
+    mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT USAGE ON *.* to '${MONITOR_USER}'@'%' IDENTIFIED BY '${MONITOR_PASSWORD}' WITH GRANT OPTION;"
 
 
     #TODO add each IP to replication slave
@@ -227,7 +318,7 @@ echo "end set up replication"
 echo "###################################################################"
 
 
-
+exit
 
 
 if [ "$PUSH_CONFIG" = false ] ; then
@@ -314,7 +405,7 @@ for server in "${ALL_SERVER[@]}"; do
 }
 EOF"
     echo "import file : ${server_json}"
-	$sudo $pmacontrol Webservice importFile "${server_json}"	
+	$sudo "${pmacontrol}" Webservice importFile "${server_json}"	
 done
 
 
@@ -342,7 +433,7 @@ for server in "${ALL_SERVER[@]}"; do
 }
 EOF"
     echo "import file : ${server_json}"
-	$sudo $pmacontrol Webservice importFile "${server_json}"	
+	$sudo "${pmacontrol}" Webservice importFile "${server_json}"	
 done
 
 

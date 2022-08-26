@@ -127,11 +127,13 @@ progressbar()
 
   MAX_STEPS=$1
 
-  if [[ -z ${STEP} ]]; then
-    STEP=1
-  else
+  set +u
+  if [[ -n "${STEP}" ]]; then
     STEP=$((STEP+1))
+  else
+    STEP=1
   fi
+  set -u
 
   # pour eviter les bug d'affichage en cas d'erreur utilisateur
   if [[ $STEP -gt $MAX_STEPS ]]; then
