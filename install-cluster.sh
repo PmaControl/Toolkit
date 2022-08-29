@@ -266,7 +266,8 @@ for proxysql in "${PROXYSQL_SERVER[@]}"; do
 
     echo "mysql -P 6032 -h ${proxysql} -u ${PROXYSQLADMIN_USER} -p${PROXYSQLADMIN_PASSWORD}"
 
-    mysql -P 6032 -h "${proxysql}" -u "${PROXYSQLADMIN_USER}" -p"${PROXYSQLADMIN_PASSWORD}" -e "update global_variables set variable_value='${MYSQL_VERSION}' where variable_name='mysql-server_version';"
+    # to prevent error with connector java from mysql
+    # mysql -P 6032 -h "${proxysql}" -u "${PROXYSQLADMIN_USER}" -p"${PROXYSQLADMIN_PASSWORD}" -e "update global_variables set variable_value='${MYSQL_VERSION}' where variable_name='mysql-server_version';"
     mysql -P 6032 -h "${proxysql}" -u "${PROXYSQLADMIN_USER}" -p"${PROXYSQLADMIN_PASSWORD}" -e "update global_variables set variable_value='false' where variable_name='mysql-multiplexing';"
     mysql -P 6032 -h "${proxysql}" -u "${PROXYSQLADMIN_USER}" -p"${PROXYSQLADMIN_PASSWORD}" -e "LOAD MYSQL VARIABLES TO RUNTIME;"
     mysql -P 6032 -h "${proxysql}" -u "${PROXYSQLADMIN_USER}" -p"${PROXYSQLADMIN_PASSWORD}" -e "SAVE MYSQL VARIABLES TO DISK;"

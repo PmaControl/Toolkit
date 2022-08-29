@@ -466,8 +466,8 @@ log_warnings            = 2
 #
 # Enable the slow query log to see queries with especially long duration
 slow_query_log=1
-slow_query_log_file     = $DATADIR/mariadb-slow.log
-long_query_time=0.1
+slow_query_log_file     = $DATADIR/log/mariadb-slow.log
+long_query_time=1
 #log_slow_rate_limit    = 1000
 log_slow_verbosity      = query_plan
 log_slave_updates       = 1
