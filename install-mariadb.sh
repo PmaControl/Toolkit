@@ -418,7 +418,7 @@ log_error=${DATADIR}/log/error.log
 max_connections         = 1000
 connect_timeout         = 10
 wait_timeout            = 600
-max_allowed_packet      = 16M
+max_allowed_packet      = 256M
 thread_cache_size       = 128
 sort_buffer_size        = 4M
 bulk_insert_buffer_size = 16M
@@ -627,7 +627,7 @@ databases-exclude=lost+found
 [mysqldump]
 quick
 quote-names
-max_allowed_packet      = 16M
+max_allowed_packet      = 256M
 
 [mysql]
 #no-auto-rehash # faster start of mysql but no tab completion
