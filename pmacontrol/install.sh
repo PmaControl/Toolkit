@@ -1,45 +1,229 @@
 #!/bin/bash
+set +x
+#set -euo pipefail
 
-password=$(date +%s | sha256sum | base64 | head -c 32 ; echo)
+
+PASSWORD=$(openssl rand -base64 32 | head -c 32)
+HOST='localhost'
+LOCAL_HOST=$(hostname)
+DEBUG=false
+SSH_VAR=''
 
 
-LOG="/tmp/pmacontrol.log"
+ERROR_LOG="/tmp/error.log"
+GENERAL_LOG="/tmp/install.log"
 
+if [[ -f "$ERROR_LOG" ]]
+then
+  rm "$ERROR_LOG"
+fi
+
+if [[ -f "$GENERAL_LOG" ]]
+then
+  rm "$GENERAL_LOG"
+fi
+
+PATH_PMA=${BASH_SOURCE%/*}
+
+while getopts 'hu:s:p:d' flag; do
+  case "${flag}" in
+    h) 
+        echo "auto install mariadb"
+        echo "example : ./install -s 10.68.68.196"
+        echo " "
+        echo "options:"
+        echo "-u USER                    user who will be used for install Pmacontrol"
+        echo "-s SERVER                  server where will be installed PmaControl"
+        echo "-p PASSWORD                specify root password for PmaControl"
+        echo "-d DEBUG                   display all logs"
+        echo ""
+        exit 0
+    ;;
+    p) PASSWORD="${OPTARG}" ;;
+    u) SSH_USER="${OPTARG}" ;;
+    s) SSH_HOST="${OPTARG}" ;;
+    d) DEBUG=true ;;
+    *) echo "Unexpected option ${flag}" 
+	exit 0
+    ;;
+  esac
+done
+
+PACKAGE_LIST="/tmp/$SSH_HOST.list"
+
+if [[ -f $PACKAGE_LIST ]]
+then 
+    rm "$PACKAGE_LIST"
+fi
 
 function display() {
-        #echo "Parameter #1 is $1"
-        msg=$1
-        date=$(date '+%Y-%M-%d %H:%M:%S')
-        echo -e "\e[1;35m[${date}]\e[0m \e[37m${HOST}:\e[0m ${msg}"
+  #echo "Parameter #1 is $1"
+  msg=$1
+  date=$(date '+%Y-%M-%d %H:%M:%S')
+  #echo -e "\e[1;35m[${date}]\e[0m \e[37m${HOST}:\e[0m ${msg}"
+  echo -e "\033[1;35m[${date}]\033[0m \033[37m${HOST}:\033[0m ${msg}"
+}
+
+
+trim(){
+    if [ $# -ne 1 ]
+    then
+        echo "USAGE: trim [STRING]"
+        return 1
+    fi
+    s="${1}"
+    size_before=${#s}
+    size_after=0
+    while [ "$size_before" -ne "$size_after" ]
+    do
+        size_before=${#s}
+        s="${s#[[:space:]]}"
+        s="${s%[[:space:]]}"
+        size_after=${#s}
+    done
+    echo "${s}"
+    return 0
+}
+
+
+execute()
+{
+    #if [[ $# -gt 1 ]]
+    #then
+    #    echo "USAGE $#: execute [STRING] [STRIN2] [...]"
+    #    return 1
+    #fi
+    HOST=$SSH_HOST
+    SSH_COMMAND="ssh $SSH_USER@$SSH_HOST "
+
+    #set +e
+    if [[ -f $1 ]]; then
+      # echo "cat $1 | $SSH_COMMAND '/bin/bash'"
+      RESULT=$(cat "$1" | $SSH_COMMAND "$SSH_VAR" '/bin/bash' 2> $ERROR_LOG)
+      test_error "$1"
+    else
+      RESULT=$($SSH_COMMAND "$SSH_VAR" "$@" > $GENERAL_LOG 2> $ERROR_LOG)
+      test_error "$@"
+      
+    fi
+    #set -e
+    RESULT=$(echo $RESULT | sed '/^$/d')
+    RESULT=$(trim "$RESULT")
+    echo "$RESULT"
+    
+}
+
+
+test_log()
+{
+
+  local tmp
+  if [ $DEBUG = true ]
+  then
+
+   if [[ -f "$GENERAL_LOG" ]];
+    then 
+      size=$(($(wc -c < "$GENERAL_LOG") +0))
+
+      if [[ $size -gt 0 ]]
+      then
+        sed -i '' '/^$/d' "$GENERAL_LOG"
+
+        tmp=$(cat "$GENERAL_LOG")
+        display "[LOG][$GENERAL_LOG] $tmp"
+        
+      fi
+    fi
+  fi
+}
+
+
+test_error()
+{
+
+  local tmp
+   if [[ -f "$ERROR_LOG" ]];
+    then 
+      # remove warning with apt for debian like
+      sed -i '' 's/WARNING: apt does not have a stable CLI interface. Use with caution in scripts.//g' "$ERROR_LOG"
+      sed -i '' '/^$/d' "$ERROR_LOG"
+
+      size=$(($(wc -c < "$ERROR_LOG") +0))
+
+      if [[ $size -gt 0 ]]
+      then
+        tmp=$(cat "$ERROR_LOG" | grep -v "WARNING: apt does not have a stable CLI interface. Use with caution in scripts.")
+
+        display "[COMMAND] $1"
+        display "[ERROR][$ERROR_LOG] $tmp"
+        exit 2
+      fi
+    fi
 }
 
 
 
-display "Update repositories"
-apt-get update 2>&1 > ${LOG}
+HOST=$LOCAL_HOST
 
-
-PKG_LIST=(
-lsb-release
-zip
-unzip
-bc
-pv
-wget
-gnupg
-gnupg2
-net-tools
-git
-tig
+LIST_COMMAND=(
+  ssh
+  nmap
+  openssl
+  cat
+  grep
+  sed
 )
 
+for COMMAND in "${LIST_COMMAND[@]}"
+do
+  # command -v will return >0 when the $i is not found
+  COLORED_COMMAND="\033[1;95m$COMMAND\033[0m"
+	command -v $COMMAND >/dev/null && display "$COLORED_COMMAND command found" && continue || { display "$COLORED_COMMAND command not found."; exit 1; }
+done
 
-path=${BASH_SOURCE%/*}
 
+source "$PATH_PMA/compat.sh"
+
+open_ports=$(nmap "$SSH_HOST" -p 22 | grep open)
+open_ports=${open_ports//[^0-9]/ } # remove text
+open_ports=$(trim "$open_ports")
+
+if [[ $open_ports -eq 22 ]]
+then
+  display "$HOST => $SSH_HOST:$open_ports open"
+else
+  display "[ERROR] $SSH_HOST:$open_ports open"
+  exit 1;
+fi
+
+HOST=$SSH_HOST
+OPERATING_SYSTEM=$(execute "$PATH_PMA/version.sh")
+test_log
+
+compat
+
+#PKG_UPDATE
+#display "Update repositories"
+#display "Upgrade repositories"
+#PKG_UPGRADE
 
 for PKG in "${PKG_LIST[@]}"; do
-	bash ${path}/apt.sh -s localhost -m install -p $PKG
+  PKG_INSTALL "$PKG"
 done
+
+
+# install mariadb
+
+
+for PKG in "${PKG_LIST_2[@]}"; do
+  PKG_INSTALL "$PKG"
+done
+
+
+
+echo "FIN"
+
+exit 1;
 
 
 cd /tmp
@@ -74,7 +258,7 @@ mariadb-plugin-rocksdb
 )
 
 for PKG in "${PKG_LIST[@]}"; do
-        bash ${path}/apt.sh -s localhost -m install -p $PKG
+        bash "${path}/apt.sh" -s localhost -m install -p "${PKG}"
 done
 
 display "restart MariaDB"
