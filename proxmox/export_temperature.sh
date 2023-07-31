@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-source proxmox.config
+source mysql.config
 
 
 #CREATE TABLE `smartd_nvme` (
