@@ -241,7 +241,7 @@ else
 	debconf-set-selections <<< "mariadb-server-${VERSION} mysql-server/root_password password $PASSWORD"
 	debconf-set-selections <<< "mariadb-server-$VERSION mysql-server/root_password_again password $PASSWORD"
 	
-	mytest apt-get -qq -y install mariadb-server-${VERSION}
+	mytest apt-get -qq -y install mariadb-server
 fi
 
 IFS=',' read -r -a array <<< "$CLUSTER_MEMBER"
