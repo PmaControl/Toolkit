@@ -135,11 +135,12 @@ for ver in "${version[@]}"; do
         echo "################### $container_name => $port"
         # Run the MariaDB docker container with the calculated port and a random password
         
-    	docker run --detach --name "$container_name" -p "$port:3306"\
-            --env MARIADB_ROOT_PASSWORD="$password"\
-            --env MARIADB_PASSWORD="$password" mariadb:"$ver"\
+    	docker run --detach --name "$container_name" -p "$port:3306" \
+            --env MARIADB_ROOT_PASSWORD="$password" \
+            --env MARIADB_PASSWORD="$password" mariadb:"$ver" \
             --log-bin \
-            --server-id=$port
+            --server-id=$port \
+            --performance-schema=on
 
         echo "mysql -h 127.0.0.1 -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
     fi
