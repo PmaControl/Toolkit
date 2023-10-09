@@ -179,6 +179,10 @@ while IFS= read -r line; do
         
         echo "MySQL version : $mysql_version"
 
+        if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
+            ip=$(hostname -I | awk '{print $1}')
+        fi
+
 
         cat <<EOF > "$TMP_JSON"
 {
