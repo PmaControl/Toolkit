@@ -47,11 +47,6 @@ while getopts 'h:u:p:' flag; do
   esac
 done
 
-
-
-
-
-
 echo "user=$PMACONTROL_USER:$PMACONTROL_PASSWORD" > $TMP_CREDENTIALS
 
 # list all version of MariaDB, that we want to install
@@ -106,8 +101,29 @@ function get_port()
 function drop_mariadb_ct()
 {
     #remove all existing docker, update with all mariadb only
-    docker stop $(docker ps -aq)
-    docker rm $(docker ps -aq)
+    if docker ps -q 2>/dev/null | grep -q .; then
+        docker stop $(docker ps -q)
+        echo "Tous les conteneurs Docker ont été arrêtés avec succès."
+    else
+        echo "Aucun conteneur Docker en cours d'exécution."
+    fi
+
+    # Supprimer tous les conteneurs Docker
+    if docker ps -aq 2>/dev/null | grep -q .; then
+        docker rm $(docker ps -aq)
+        echo "Tous les conteneurs Docker ont été supprimés avec succès."
+    else
+        echo "Aucun conteneur Docker à supprimer."
+    fi
+    
+    # Vérifie s'il y a des volumes inutilisés
+    if [ -n "$(docker volume ls -qf 'dangling=true')" ]; then
+        # Supprime les volumes inutilisés
+        docker volume rm $(docker volume ls -qf 'dangling=true')
+        echo "Volumes inutilisés supprimés."
+    else
+        echo "Aucun volume inutilisé trouvé."
+    fi
 }
 
 echo "Following port will be used :"
@@ -140,9 +156,13 @@ for ver in "${version[@]}"; do
             --env MARIADB_PASSWORD="$password" mariadb:"$ver" \
             --log-bin \
             --server-id=$port \
-            --performance-schema=on
+            --performance-schema=on \
+            --gtid-domain-id=$port
 
-        echo "mysql -h 127.0.0.1 -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
+
+        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
+
+        echo "mysql -h $ip_docker -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
     fi
 done
 
@@ -168,14 +188,11 @@ while IFS= read -r line; do
 
     # Create a user and grant privileges to the user for the new database
 
-    mysql -h 127.0.0.1 -P "$port" -u "$user" -p"$password" -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PMACONTROL_USER}'@'%' IDENTIFIED BY '${MYSQL_PMACONTROL_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+    mysql -h $ip -P "$port" -u "$user" -p"$password" -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PMACONTROL_USER}'@'%' IDENTIFIED BY '${MYSQL_PMACONTROL_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
     code_error=$?
     
-
-    if [[ $code_error -eq 0 ]]
-    then
-
-        mysql_version=$(mysql -h 127.0.0.1 -P "$port" -u "$MYSQL_PMACONTROL_USER" -p"$MYSQL_PMACONTROL_PASSWORD" -NB -e "SELECT VERSION()")
+    if [[ $code_error -eq 0 ]]; then
+        mysql_version=$(mysql -h $ip -P "$port" -u "$MYSQL_PMACONTROL_USER" -p"$MYSQL_PMACONTROL_PASSWORD" -NB -e "SELECT VERSION()")
         TMP_JSON=$(mktemp)
         
         echo "MySQL version : $mysql_version"
@@ -215,11 +232,10 @@ EOF
             # TODO : Test if pmacontrol directory or not
         fi
     else
-        echo "[ERROR] Impossible to set user $MYSQL_PMACONTROL_USER on 127.0.0.1:$port ($mysql_version)"
+        echo "[ERROR] Impossible to set user $MYSQL_PMACONTROL_USER on $ip:$port"
     
     fi
 done < "$TMP_USER_PASSWORD"
-
 
 rm $TMP_CREDENTIALS
 rm $TMP_USER_PASSWORD
