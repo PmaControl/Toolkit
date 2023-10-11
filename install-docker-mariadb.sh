@@ -198,7 +198,7 @@ while IFS= read -r line; do
         echo "MySQL version : $mysql_version"
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
-            ip=$(hostname -I | awk '{print $1}')
+            $ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
         fi
 
 
@@ -227,7 +227,6 @@ EOF
             pmacontrol webservice importFile "${TMP_JSON}"
         else
             echo "Using curl"
-            #curl -X POST -K /tmp/password.tmp  -H 'Content-Type: application/json' -d @/tmp/tmp.rH2bWNJtcp "http://$PMACONTROL_SERVER/pmacontrol/en/webservice/pushServer/"
             curl -X POST -K "$TMP_CREDENTIALS" -H "Content-Type: application/json" -d "@$TMP_JSON" "http://$PMACONTROL_SERVER/pmacontrol/en/webservice/pushServer/"
             # TODO : Test if pmacontrol directory or not
         fi
