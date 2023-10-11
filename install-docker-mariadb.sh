@@ -4,12 +4,12 @@
 # docker openssl mysql pmacontrol 
 set -euo pipefail
 
-cmd=(
-docker
-mysql
-openssl
-curl
-)
+#cmd=(
+#docker
+#mysql
+#openssl
+#curl
+#)
 
 #used for port need 5 digit
 PREFIX=60000
@@ -47,7 +47,7 @@ while getopts 'h:u:p:' flag; do
   esac
 done
 
-echo "user=$PMACONTROL_USER:$PMACONTROL_PASSWORD" > $TMP_CREDENTIALS
+echo "user=$PMACONTROL_USER:$PMACONTROL_PASSWORD" > "$TMP_CREDENTIALS"
 
 # list all version of MariaDB, that we want to install
 version=(
@@ -74,10 +74,10 @@ function get_port()
     fi   
   
     # else we got 10,1 instead of 10.1 in ubuntu
-    
-    #ver=${1/,/.}
-    ver=$(echo "$1" | sed 's/,/./g')
+    # ver=$(echo "$1" | sed 's/,/./g')
+    ver="${1//,/.}"
 
+    # shellcheck disable=SC2206
     major_minor=(${ver//./ })  # Sépare la partie entière de la partie décimale
     major=${major_minor[0]}
     minor=${major_minor[1]}
@@ -102,6 +102,7 @@ function drop_mariadb_ct()
 {
     #remove all existing docker, update with all mariadb only
     if docker ps -q 2>/dev/null | grep -q .; then
+        # shellcheck disable=SC2046
         docker stop $(docker ps -q)
         echo "Tous les conteneurs Docker ont été arrêtés avec succès."
     else
@@ -110,6 +111,7 @@ function drop_mariadb_ct()
 
     # Supprimer tous les conteneurs Docker
     if docker ps -aq 2>/dev/null | grep -q .; then
+        # shellcheck disable=SC2046
         docker rm $(docker ps -aq)
         echo "Tous les conteneurs Docker ont été supprimés avec succès."
     else
@@ -119,6 +121,7 @@ function drop_mariadb_ct()
     # Vérifie s'il y a des volumes inutilisés
     if [ -n "$(docker volume ls -qf 'dangling=true')" ]; then
         # Supprime les volumes inutilisés
+        # shellcheck disable=SC2046
         docker volume rm $(docker volume ls -qf 'dangling=true')
         echo "Volumes inutilisés supprimés."
     else
@@ -155,9 +158,9 @@ for ver in "${version[@]}"; do
             --env MARIADB_ROOT_PASSWORD="$password" \
             --env MARIADB_PASSWORD="$password" mariadb:"$ver" \
             --log-bin \
-            --server-id=$port \
+            --server-id="$port" \
             --performance-schema=on \
-            --gtid-domain-id=$port
+            --gtid-domain-id="$port"
 
 
         ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
@@ -188,17 +191,17 @@ while IFS= read -r line; do
 
     # Create a user and grant privileges to the user for the new database
 
-    mysql -h $ip -P "$port" -u "$user" -p"$password" -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PMACONTROL_USER}'@'%' IDENTIFIED BY '${MYSQL_PMACONTROL_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+    mysql -h "$ip" -P "$port" -u "$user" -p"$password" -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PMACONTROL_USER}'@'%' IDENTIFIED BY '${MYSQL_PMACONTROL_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
     code_error=$?
     
     if [[ $code_error -eq 0 ]]; then
-        mysql_version=$(mysql -h $ip -P "$port" -u "$MYSQL_PMACONTROL_USER" -p"$MYSQL_PMACONTROL_PASSWORD" -NB -e "SELECT VERSION()")
+        mysql_version=$(mysql -h "$ip" -P "$port" -u "$MYSQL_PMACONTROL_USER" -p"$MYSQL_PMACONTROL_PASSWORD" -NB -e "SELECT VERSION()")
         TMP_JSON=$(mktemp)
         
         echo "MySQL version : $mysql_version"
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
-            $ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
+            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
         fi
 
 
@@ -236,6 +239,6 @@ EOF
     fi
 done < "$TMP_USER_PASSWORD"
 
-rm $TMP_CREDENTIALS
-rm $TMP_USER_PASSWORD
-rm $TMP_JSON
+rm "$TMP_CREDENTIALS"
+rm "$TMP_USER_PASSWORD"
+rm "$TMP_JSON"
