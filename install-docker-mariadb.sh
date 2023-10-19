@@ -201,6 +201,7 @@ while IFS= read -r line; do
         echo "MySQL version : $mysql_version"
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
+            # the goal is to remove IP from docker but it can made some trouble is main IP start by 172
             ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
         fi
 
