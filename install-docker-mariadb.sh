@@ -163,7 +163,7 @@ for ver in "${version[@]}"; do
             --gtid-domain-id="$port"
 
 
-        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
+        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | head -n1)
 
         echo "mysql -h $ip_docker -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
     fi
@@ -173,10 +173,11 @@ docker ps
 
 
 echo "Sleeping 10 sec the time mysql will be up ...."
-sleep 10
+sleep 25
 
 while IFS= read -r line; do
     # Extraction des informations depuis chaque ligne
+    echo "$line"
     user=$(echo "$line" | awk '{print $5}')
     ip=$(echo "$line" | awk '{print $3}')
     port=$(echo "$line" | awk '{print $8}')
@@ -188,7 +189,7 @@ while IFS= read -r line; do
     echo "ip:port  : $ip:$port"
     echo "user     : $user"
     echo "password : $password"
-
+    echo "####################"
     # Create a user and grant privileges to the user for the new database
 
     mysql -h "$ip" -P "$port" -u "$user" -p"$password" -e "GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_PMACONTROL_USER}'@'%' IDENTIFIED BY '${MYSQL_PMACONTROL_PASSWORD}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
@@ -202,7 +203,7 @@ while IFS= read -r line; do
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
             # the goal is to remove IP from docker but it can made some trouble is main IP start by 172
-            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172)
+            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | head -n1)
         fi
 
 
