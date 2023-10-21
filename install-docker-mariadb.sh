@@ -163,7 +163,7 @@ for ver in "${version[@]}"; do
             --gtid-domain-id="$port"
 
 
-        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | head -n1)
+        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n1)
 
         echo "mysql -h $ip_docker -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
     fi
@@ -203,7 +203,7 @@ while IFS= read -r line; do
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
             # the goal is to remove IP from docker but it can made some trouble is main IP start by 172
-            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | head -n1)
+            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n1)
         fi
 
 
