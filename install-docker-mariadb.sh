@@ -129,6 +129,13 @@ function drop_mariadb_ct()
     fi
 }
 
+function get_ip()
+{
+    #get IPv4 from host to send it to PmaControl later
+    ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n1)
+    echo $ip
+}
+
 echo "Following port will be used :"
 for ver in "${version[@]}"; do
     port=$(get_port "$ver")
@@ -154,7 +161,9 @@ for ver in "${version[@]}"; do
         echo "################### $container_name => $port"
         # Run the MariaDB docker container with the calculated port and a random password
         
-    	docker run --detach --name "$container_name" -p "$port:3306" \
+        hostname=$(echo "mariadb-$ver" | sed 's/\./-/g')
+
+    	docker run --detach -h "$hostname" --name "$container_name" -p "$port:3306" \
             --env MARIADB_ROOT_PASSWORD="$password" \
             --env MARIADB_PASSWORD="$password" mariadb:"$ver" \
             --log-bin \
@@ -163,7 +172,7 @@ for ver in "${version[@]}"; do
             --gtid-domain-id="$port"
 
 
-        ip_docker=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n1)
+        ip_docker=$(get_ip)
 
         echo "mysql -h $ip_docker -u root -p$password -P $port" >> "$TMP_USER_PASSWORD"
     fi
@@ -203,7 +212,7 @@ while IFS= read -r line; do
 
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
             # the goal is to remove IP from docker but it can made some trouble is main IP start by 172
-            ip=$(hostname -I | tr ' ' '\n' | grep -v '^$' | grep -v ^172 | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | head -n1)
+            ip=$(get_ip)
         fi
 
 
