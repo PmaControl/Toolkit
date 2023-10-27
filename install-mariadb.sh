@@ -140,7 +140,8 @@ case "$OS" in
     "buster")      ;;
     "focal")       ;;
     "bullseye")    ;;
-    "jammy")    ;;
+    "jammy")       ;;
+    "bookworm")    ;;
     *)
         echo "This version is not supported : '$OS'"
         exit 1;
