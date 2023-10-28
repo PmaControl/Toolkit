@@ -213,8 +213,11 @@ while IFS= read -r line; do
         if [[ "127.0.0.1" != "$PMACONTROL_SERVER" ]] ; then
             # the goal is to remove IP from docker but it can made some trouble is main IP start by 172
             ip=$(get_ip)
-        fi
 
+	else
+	    # in case where docker is in same place than pmacontrol, to prevent change ip on laptop when we move to Wifi or LAN
+	    ip='127.0.0.1'
+        fi
 
         cat <<EOF > "$TMP_JSON"
 {

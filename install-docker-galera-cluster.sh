@@ -11,7 +11,6 @@ set -euo pipefail
 #curl
 #)
 
-
 PMACONTROL_SERVER="127.0.0.1"
 PMACONTROL_USER="webservice"
 PMACONTROL_PASSWORD="my_secret_password"
@@ -22,7 +21,7 @@ MYSQL_PMACONTROL_PASSWORD=$(openssl rand -hex 16 | base64 | head -c 32)
 TMP_USER_PASSWORD=$(mktemp)
 TMP_CREDENTIALS=$(mktemp)
 
-PORT_RANGE_START=50000
+PORT_RANGE_START=50123
 PORT_RANGE_END=60000
 
 
@@ -97,8 +96,6 @@ function get_port()
 	done
 }
 
-
-
 typeset -r __CRC32_TABLE="0x00000000 0x77073096 0xEE0E612C 0x990951BA 0x076DC419 0x706AF48F 0xE963A535 0x9E6495A3 0x0EDB8832 0x79DCB8A4
 0xE0D5E91E 0x97D2D988 0x09B64C2B 0x7EB17CBD 0xE7B82D07 0x90BF1D91 0x1DB71064 0x6AB020F2 0xF3B97148 0x84BE41DE
 0x1ADAD47D 0x6DDDE4EB 0xF4D4B551 0x83D385C7 0x136C9856 0x646BA8C0 0xFD62F97A 0x8A65C9EC 0x14015C4F 0x63066CD9
@@ -158,14 +155,12 @@ function crc32-string {
     echo "${crc}"
 }
 
-
-
+#10.2
+#10.3
+#10.4
+#10.5
 # list all version of MariaDB, that we want to install
 version=(
-10.2
-10.3
-10.4
-10.5
 10.6
 10.7
 10.8
@@ -178,9 +173,7 @@ version=(
 
 prefix="galera-cluster-"
 
-prefix="galera-cluster-"
-
-# Obtenez la liste des réseaux Docker avec le préfixe spécifié
+# Obtenez la liste des conteneurs Docker avec le préfixe spécifié
 dockers=$(docker ps -a --filter "name=galera-" --format '{{.ID}}')
 
 # Boucle pour supprimer chaque réseau s'il existe
@@ -191,7 +184,6 @@ for docker in $dockers; do
         docker rm -f "$docker"
     fi
 done
-
 
 # Obtenez la liste des réseaux Docker avec le préfixe spécifié
 networks=$(docker network ls --filter "name=${prefix}" --format '{{.ID}}')
@@ -209,10 +201,8 @@ done
 echo "Remove all unused networks. Unused networks are those which are not referenced by any containers."
 docker network prune -f
 
-
-
-
-
+echo "hostname -I"
+hostname -I
 
 
 PORT_CURRENT=$PORT_RANGE_START
@@ -221,7 +211,8 @@ for ver in "${version[@]}"; do
 	sub=$(get_sub_ip "$ver")
 	part_ip="172.${sub}"
 	ver_sep="${ver//./-}"
-	network="galera-cluster-$ver_sep"
+  
+	network="galera_cluster_$ver_sep"
 
 	echo "##########################################################"
 	echo "Create network ${part_ip}.0/24 on $network"
@@ -235,7 +226,7 @@ for ver in "${version[@]}"; do
 		mkdir -p "$dir"
 		chown 999:999 "${dir}"
 
-		ip_of_node="${part_ip}.${i}"
+		ip_of_node="${part_ip}.10${i}"
 		hostname="galera-${ver_sep}-node-${i}"
 
 		echo "Create $hostname"
@@ -257,29 +248,50 @@ EOF
 
 		port=$(get_port "$PORT_CURRENT" "$PORT_RANGE_END")
 
-		GALERA_NEW_CLUSTER=0
+		GALERA_NEW_CLUSTER=""
 		if [[ $i -eq 1 ]]; then
-			GALERA_NEW_CLUSTER=1
+			GALERA_NEW_CLUSTER="--wsrep-new-cluster"
 		fi
 
 		echo "Docker run %%%%%%%%%%%"
 		echo "network   : $network"
 		echo "hostname  : $hostname"
+		echo "port      : $port"
 		echo "ip        : $ip_of_node"
 		echo "domain_id : $domain_id"
 
-		docker run -d --restart=unless-stopped --net "${network}" \
-		--name "$hostname" -h "$hostname" --ip "${ip_of_node}" \
-		-p "$port":3306 \
-		-v "${dir}/galera.cnf:/etc/mysql/conf.d/galera.cnf" \
-		-v "${dir}:/var/lib/mysql" \
-		-e MYSQL_ROOT_PASSWORD=secret_galera_password \
-		-e "GALERA_NEW_CLUSTER=$GALERA_NEW_CLUSTER" \
-		mariadb:"$ver" --log-bin \
-            --server-id="$port" \
-            --performance-schema=on \
-            --gtid-domain-id="$domain_id"
 
+				str=" run -d --restart=unless-stopped --net ${network} \
+		--name $hostname \
+		-h $hostname \
+		--ip ${ip_of_node} \
+		-p $port:3306 \
+		-v ${dir}/galera.cnf:/etc/mysql/conf.d/galera.cnf \
+		-v ${dir}:/var/lib/mysql \
+		-e MYSQL_ROOT_PASSWORD=secret_galera_password \
+		mariadb:$ver $GALERA_NEW_CLUSTER  \
+		    --log-bin \
+            --server-id=$port \
+            --performance-schema=on \
+            --gtid-domain-id=$domain_id \
+            --binlog_format=ROW \
+			--default_storage_engine=InnoDB \
+			--innodb_autoinc_lock_mode=2 \
+			--innodb_flush_log_at_trx_commit=2 \
+			--innodb_doublewrite=1 \
+			--wsrep_on=ON \
+			--wsrep_provider=/usr/lib/libgalera_smm.so \
+			--wsrep_sst_method=rsync"
+
+			echo $str
+
+		docker $str
+
+		sleep 1
+
+		if [[ $i -eq 1 ]] ; then
+			mysql -h 127.0.0.1 -u root -psecret_galera_password -P "$port" -e "show global status like 'wsrep_cluster_size';"
+		fi
 
         echo "Docker end %%%%%%%%%%%%"
 		PORT_CURRENT=$((port+i))
