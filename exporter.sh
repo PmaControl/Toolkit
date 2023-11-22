@@ -62,7 +62,7 @@ GLOBAL_STATUS=$(get_query "$status")
 GLOBAL_VARIABLES=$(get_query "$variable")
 
 
-USERS=$(get_table "sys" "sys_config")
+USERS=$(get_table "sys" "ps_disk_io")
 
 #echo -e $USERS
 
