@@ -702,3 +702,4 @@ dnf install -y tree mlocate screen iftop htop curl git unzip atop nmap > /dev/nu
 
 mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root -p"$PASSWORD" mysql
 
+echo "mariadb installed by Volodymyr Barvinok"
