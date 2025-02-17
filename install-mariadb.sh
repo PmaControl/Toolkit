@@ -669,7 +669,7 @@ set +e
 mytest apt-get -qq update > /dev/null
 set -e
 #mytest apt-get -qq install -y percona-toolkit > /dev/null
-mytest apt-get -qq install -y netcat tar socat lsof > /dev/null
+mytest apt-get -qq install -y tar socat lsof > /dev/null
 
 
 
