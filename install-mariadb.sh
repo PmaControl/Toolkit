@@ -142,6 +142,7 @@ case "$OS" in
     "bullseye")    ;;
     "jammy")       ;;
     "bookworm")    ;;
+    "noble")    ;;
     *)
         echo "This version is not supported : '$OS'"
         exit 1;
@@ -256,7 +257,6 @@ done
 #mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO dba@'%' IDENTIFIED BY '$PASSWORD' WITH GRANT OPTION; "
 
 mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO root@'localhost' IDENTIFIED BY '${PASSWORD}' WITH GRANT OPTION;"
-mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'debian-sys-maint'@'localhost' IDENTIFIED BY '${DEBIAN_PASSWORD}' WITH GRANT OPTION;"
 
 if [[ "${IP_PMACONTROL}" != 'localhost' ]]
 then
@@ -642,9 +642,16 @@ key_buffer              = 16M
 EOF
 
 
+
+case "$VERSION" in
+    "11.4")      ;;
+    "11.8")     ;;
+    *)
+
 if [[ -n $DEBIAN_PASSWORD ]]
 then
 
+mytest mysql -u root -p"${PASSWORD}" -e "GRANT ALL ON *.* TO 'debian-sys-maint'@'localhost' IDENTIFIED BY '${DEBIAN_PASSWORD}' WITH GRANT OPTION;"
 cat > /etc/mysql/debian.cnf << EOF
 # Automatically generated for Debian scripts. DO NOT TOUCH!
 # Pmacontrol/Toolkit
@@ -659,11 +666,11 @@ user     = debian-sys-maint
 password = $DEBIAN_PASSWORD
 socket   = /var/run/mysqld/mysqld.sock
 basedir  = /usr
-
 EOF
 
 fi
-
+;;
+esac
 
 set +e
 mytest apt-get -qq update > /dev/null
@@ -699,3 +706,4 @@ apt-get -qq install -y tree locate screen iftop htop curl git unzip atop nmap > 
 
 
 mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root -p"$PASSWORD" mysql
+
