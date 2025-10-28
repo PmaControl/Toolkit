@@ -127,18 +127,21 @@ TARGET_DIR="toolkit"
 
 # === Clonage idempotent ===
 if [ -d "$TARGET_DIR/.git" ]; then
-  $sudo echo "🔁 Le dépôt existe déjà — mise à jour..."
-  $sudo git -C "$TARGET_DIR" fetch --all --quiet
-  $sudo git -C "$TARGET_DIR" reset --hard origin/main --quiet
+  echo "🔁 Le dépôt existe déjà — mise à jour..."
+  cd "$TARGET_DIR"
+
+  # Récupérer la branche par défaut du remote
+  DEFAULT_BRANCH=$(sudo git remote show origin | awk '/HEAD branch/ {print $NF}')
+
+  sudo git fetch --all --quiet
+  sudo git reset --hard "origin/${DEFAULT_BRANCH}" --quiet
 else
-  $sudo echo "⬇️  Clonage du dépôt..."
-  $sudo git clone "$REPO_URL" "$TARGET_DIR"
+  echo "⬇️  Clonage du dépôt..."
+  sudo git clone "$REPO_URL" "$TARGET_DIR"
+  cd "$TARGET_DIR"
 fi
 
-# === Entrer dans le répertoire ===
-$sudo cd "$TARGET_DIR"
-
-$sudo echo "✅ Répertoire prêt : $(pwd)"
+echo "✅ Répertoire prêt : $(pwd)"
 
 
 pwgen() {
