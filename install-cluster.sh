@@ -6,7 +6,7 @@ tmp_file=$(mktemp)
 error_mysql=$(mktemp)
 DEBUG="true"
 PUSH_CONFIG=false
-
+SSH_USER='root'
 path=${BASH_SOURCE%/*}
 
 echo "PWD : $path"
@@ -62,19 +62,19 @@ if [ ! -f "${password_file}" ]
 then
     echo "File does not exist in Bash"
     PMACONTROL_USER="pmacontrol"
-    PMACONTROL_PASSWORD=$(openssl rand -base64 32 | head -c 32)
+    PMACONTROL_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
 
     MONITOR_USER="monitor"
-    MONITOR_PASSWORD=$(openssl rand -base64 32 | head -c 32)
+    MONITOR_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
 
     REPLICATION_USER="replication_slave"
-    REPLICATION_PASSWORD=$(openssl rand -base64 32 | head -c 32)
+    REPLICATION_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
 
     PROXYSQLADMIN_USER="proxysql"
-    PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32 | head -c 32)
+    PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
 
     DBA_USER="dba"
-    DBA_PASSWORD=$(openssl rand -base64 32 | head -c 32)
+    DBA_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
 
 
     cat > "${password_file}" << EOF

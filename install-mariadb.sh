@@ -5,7 +5,7 @@
 set -euo pipefail
 IFS=$'\n\t'
 
-VERSION='10.7'
+VERSION='11.4'
 CLUSTER_NAME='68Koncept'
 CLUSTER_MEMBER=''
 PASSWORD=''

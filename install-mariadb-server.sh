@@ -6,7 +6,7 @@ while getopts 'hm:p:u:P:s:U:' flag; do
   case "${flag}" in
     h)
         echo "auto install mariadb"
-        echo "example : ./install-proxysql.sh -s '10.68.68.179' -p '10.68.68.179,10.68.68.180' -o '10.114.5.13'"
+        echo "example : ./install-proxysql.sh -s '10.68.68.179' -m '10.68.68.179,10.68.68.180' -o '10.114.5.13'"
         echo " "
         echo "options:"
 
@@ -87,6 +87,7 @@ then
   $sudo apt install -y tig
   $sudo apt install -y wget
   $sudo apt install -y gdisk
+  $sudo apt install -y btop
   
   #$sudo apt install -y tee
 
@@ -119,9 +120,9 @@ then
   $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
-  pass=$($sudo openssl rand -base64 32)
+  pass=$($sudo openssl rand -base64 32 | rev | head -c 32)
 
-  $sudo ./install-mariadb.sh -v 10.7 -p "$pass" -d /srv/mysql
+  $sudo ./install-mariadb.sh -v 11.4 -p "$pass" -d /srv/mysql -r
   $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to '${DBA_USER}'@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
 else
