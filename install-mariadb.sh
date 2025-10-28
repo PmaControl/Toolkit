@@ -106,7 +106,7 @@ function mytest {
 
 if [[ -z ${VERSION} ]]; 
 then 
-  VERSION='10.6'
+  VERSION='11.4'
 fi
 
 if [[ -z ${PASSWORD} ]]; 

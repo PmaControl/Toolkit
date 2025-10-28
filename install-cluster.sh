@@ -58,23 +58,35 @@ echo "MD5 : ${MD5}"
 mkdir -p ${PATH_DIRECTORY_PASSWORD}
 password_file="${PATH_DIRECTORY_PASSWORD}/${CLIENT}-${ENVIRONMENT}-${TAG}-${MD5}.secret"
 
+
+
+pwgen() {
+  local pass
+  pass=$(cat /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+?~' | head -c 32)
+  # Vérifie les conditions et relance si non respectées
+  while ! [[ "$pass" =~ [A-Z] && "$pass" =~ [a-z] && "$pass" =~ [0-9] && "$pass" =~ [\!\@\#\$\%\^\&\*\(\)\-\_\=\+\?\~] ]]; do
+    pass=$(cat /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+?~' | head -c 32)
+  done
+  echo "$pass"
+}
+
 if [ ! -f "${password_file}" ]
 then
     echo "File does not exist in Bash"
     PMACONTROL_USER="pmacontrol"
-    PMACONTROL_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
+    PMACONTROL_PASSWORD=$(pwgen)
 
     MONITOR_USER="monitor"
-    MONITOR_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
+    MONITOR_PASSWORD=$(pwgen)
 
     REPLICATION_USER="replication_slave"
-    REPLICATION_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
+    REPLICATION_PASSWORD=$(pwgen)
 
     PROXYSQLADMIN_USER="proxysql"
-    PROXYSQLADMIN_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
+    PROXYSQLADMIN_PASSWORD=$(pwgen)
 
     DBA_USER="dba"
-    DBA_PASSWORD=$(openssl rand -base64 32 | rev | head -c 32)
+    DBA_PASSWORD=$(pwgen)
 
 
     cat > "${password_file}" << EOF

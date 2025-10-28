@@ -120,9 +120,19 @@ then
   $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
-  pass=$($sudo openssl rand -base64 32 | rev | head -c 32)
+pwgen() {
+  local pass
+  pass=$(cat /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+?~' | head -c 32)
+  # Vérifie les conditions et relance si non respectées
+  while ! [[ "$pass" =~ [A-Z] && "$pass" =~ [a-z] && "$pass" =~ [0-9] && "$pass" =~ [\!\@\#\$\%\^\&\*\(\)\-\_\=\+\?\~] ]]; do
+    pass=$(cat /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+?~' | head -c 32)
+  done
+  echo "$pass"
+}
 
-  $sudo ./install-mariadb.sh -v 11.4 -p "$pass" -d /srv/mysql -r
+  pass=$(pwgen)
+
+  $sudo ./install-mariadb.sh -v 11.4 -p "${pass}" -d /srv/mysql -r
   $sudo mysql --defaults-file=/root/.my.cnf -e "GRANT ALL ON *.* to '${DBA_USER}'@'%' IDENTIFIED BY '${DBA_PASSWORD}' WITH GRANT OPTION;"
 
 else
