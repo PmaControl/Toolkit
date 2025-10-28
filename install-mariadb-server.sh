@@ -120,6 +120,27 @@ then
   $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
   cd toolkit
 
+
+
+REPO_URL="https://github.com/PmaControl/Toolkit.git"
+TARGET_DIR="toolkit"
+
+# === Clonage idempotent ===
+if [ -d "$TARGET_DIR/.git" ]; then
+  $sudo echo "🔁 Le dépôt existe déjà — mise à jour..."
+  $sudo git -C "$TARGET_DIR" fetch --all --quiet
+  $sudo git -C "$TARGET_DIR" reset --hard origin/main --quiet
+else
+  $sudo echo "⬇️  Clonage du dépôt..."
+  $sudo git clone "$REPO_URL" "$TARGET_DIR"
+fi
+
+# === Entrer dans le répertoire ===
+$sudo cd "$TARGET_DIR"
+
+$sudo echo "✅ Répertoire prêt : $(pwd)"
+
+
 pwgen() {
   local pass
   pass=$(cat /dev/urandom | tr -dc 'A-Za-z0-9!@#$%^&*()-_=+?~' | head -c 32)
