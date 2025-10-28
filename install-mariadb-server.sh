@@ -116,9 +116,9 @@ then
 
   echo "PROXY : '${HTTP_PROXY}'"
 
-  $sudo git config --global http.proxy "${HTTP_PROXY}"
-  $sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
-  cd toolkit
+  #$sudo git config --global http.proxy "${HTTP_PROXY}"
+  #$sudo git clone https://github.com/PmaControl/Toolkit.git toolkit
+  #cd toolkit
 
 
 
