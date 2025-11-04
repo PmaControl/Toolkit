@@ -641,7 +641,7 @@ key_buffer              = 16M
 
 EOF
 
-
+mytest service mysql start > /dev/null
 
 case "$VERSION" in
     "11.4")      ;;
