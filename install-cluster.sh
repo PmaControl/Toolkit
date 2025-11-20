@@ -169,7 +169,7 @@ if [ "$PUSH_CONFIG" = false ] ; then
     echo "#########################################"
     echo "Install MariaDB Server"
     echo "#########################################"
-    ./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
+    #./install-mariadb-server.sh -m "${MARIADB_SERVERS}" -U "${SSH_USER}" -s '' -u "${DBA_USER}" -p"${DBA_PASSWORD}"
 
     echo "#########################################"
     echo "End install MariaDB Server"
@@ -182,15 +182,15 @@ for mariadb in "${MARIADB_SERVER[@]}"; do
 
     nmap ${mariadb} -p 3306
 
-    mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT ALL ON *.* to '${PMACONTROL_USER}'@'%' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
+    #mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT ALL ON *.* to '${PMACONTROL_USER}'@'%' IDENTIFIED BY '${PMACONTROL_PASSWORD}' WITH GRANT OPTION;"
     
     # boucle proxy
 
-    mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT USAGE,SLAVE MONITOR ON *.* to '${MONITOR_USER}'@'%' IDENTIFIED BY '${MONITOR_PASSWORD}' WITH GRANT OPTION;"
+    #mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT USAGE,SLAVE MONITOR ON *.* to '${MONITOR_USER}'@'%' IDENTIFIED BY '${MONITOR_PASSWORD}' WITH GRANT OPTION;"
 
 
     #TODO add each IP to replication slave
-    mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';"
+    #mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "GRANT REPLICATION CLIENT,REPLICATION SLAVE ON *.* to '${REPLICATION_USER}'@'%' IDENTIFIED BY '${REPLICATION_PASSWORD}';"
     
 done
 
@@ -201,38 +201,38 @@ echo "SET UP REPLICATION"
 echo "###################################################################"
 MASTER=$(echo "${MARIADB_SERVERS}" | cut -f 1 -d ",")
 
-mysql -h "${MASTER}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
+#mysql -h "${MASTER}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW MASTER STATUS"
 
 mysql_user=${DBA_USER}
 mysql_password=${DBA_PASSWORD}
 
-ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
-ct_mysql_parse
+#ct_mysql_query "${MASTER}" 'SHOW MASTER STATUS'
+#ct_mysql_parse
 
 IFS=',' read -ra MARIADB_SERVER <<< "$MARIADB_SERVERS"
 for mariadb in "${MARIADB_SERVER[@]}"; do
 
-    if [[ "${mariadb}" != "${MASTER}" ]]; then
+ #   if [[ "${mariadb}" != "${MASTER}" ]]; then
 
         echo "Serveur : ${mariadb}"
-        echo "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
-        mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "STOP SLAVE; RESET SLAVE ALL;"
-        mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
-        mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "START SLAVE;"
-        sleep 1
-        mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
-        mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "set global read_only=1;"
-    else
-        ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
-        ct_mysql_parse
+ #       echo "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
+ #       mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "STOP SLAVE; RESET SLAVE ALL;"
+ #       mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "CHANGE MASTER TO MASTER_HOST='${MASTER}', MASTER_PORT=3306,MASTER_USER='${REPLICATION_USER}', MASTER_PASSWORD='${REPLICATION_PASSWORD}', MASTER_LOG_FILE='${MYSQL_FILE_1}', MASTER_LOG_POS=${MYSQL_POSITION_1};"
+ #       mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "START SLAVE;"
+ #       sleep 1
+ #       mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "SHOW SLAVE STATUS\G"
+ #       mysql -h "${mariadb}" -u "${DBA_USER}" -p"${DBA_PASSWORD}" -e "set global read_only=1;"
+ #   else
+ #       ct_mysql_query "${MASTER}" "SELECT PASSWORD FROM mysql.user WHERE user='${PMACONTROL_USER}'"
+ #       ct_mysql_parse
 
-        HASH_PMACONTROL=${MYSQL_PASSWORD_1}
+  #      HASH_PMACONTROL=${MYSQL_PASSWORD_1}
 
-        ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
-        ct_mysql_parse
+ #       ct_mysql_query "${MASTER}" "SELECT SUBSTRING_INDEX(@@version, '-', 1) as VERSION;"
+ #       ct_mysql_parse
 
-        MYSQL_VERSION=${MYSQL_VERSION_1}
-    fi
+ #       MYSQL_VERSION=${MYSQL_VERSION_1}
+ #   fi
 done
 echo "###################################################################"
 echo "end set up replication"

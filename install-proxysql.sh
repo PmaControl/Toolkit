@@ -94,7 +94,7 @@ then
     
     echo "Test mysql account for ProxySQL"
     for i in "${MARIADB_SERVER[@]}"; do
-        if ! mysql --connect-timeout=5 -h ${i} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} -e 'use mysql'; then
+        if ! mysql --ssl-verify-server-cert=OFF --connect-timeout=5 -h ${i} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} -e 'use mysql'; then
             echo "Impossible to MySQL connect to server ${i} from ProxySQL ${SERVER_TO_INSTALL} with ${MYSQL_USER}//${MYSQL_PASSWORD}"
             exit 1;
         fi
