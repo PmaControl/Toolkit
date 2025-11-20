@@ -3,11 +3,16 @@
 set -euo pipefail
 
 # === Variables par défaut ===
-BACKUP_DIR="/srv/mysql/backup/daily"
+
+
+BACKUP_DIR="/srv/backup/FRDC1-DR-DTA01L/daily"
+
+
 TMP_DIR="/tmp/mysql_restore"
 MYSQL_HOST="45.45.99.99"
 MYSQL_USER="root"
 MYSQL_PASS="DFGHQRSTHGTA"
+MYSQL_PORT="3306"
 DRYRUN=false
 
 # === Fonction d’aide ===
@@ -26,13 +31,91 @@ while [[ $# -gt 0 ]]; do
     -h) MYSQL_HOST="$2"; shift 2 ;;
     -u) MYSQL_USER="$2"; shift 2 ;;
     -p) MYSQL_PASS="$2"; shift 2 ;;
+    -P) MYSQL_PORT="$2"; shift 2 ;;
     --dry-run) DRYRUN=true; shift ;;
     -*) echo "Option inconnue : $1"; usage ;;
     *) usage ;;
   esac
 done
 
-MYSQL_OPTS="--host=$MYSQL_HOST --user=$MYSQL_USER"
+get_gzip_original_size() {
+    local file="$1"
+
+    # Vérification fichier
+    if [[ ! -f "$file" ]]; then
+        echo "Erreur: fichier introuvable: $file" >&2
+        return 1
+    fi
+
+    # Vérification extension
+    if [[ "$file" != *.gz ]]; then
+        echo "Erreur: fichier non gzip: $file" >&2
+        return 1
+    fi
+
+    # ==== 1. Lecture FAST via footer GZIP (uint32 LE) ====
+    local footer
+    footer=$(tail -c4 "$file" | od -An -t u4 | xargs)
+
+    # ==== 2. Détection overflow ====
+    # GZIP footer = uint32 → max 4 294 967 295 bytes
+    # Si la taille compressée d'origine < 4GB et cohérente, OK.
+    # Sinon → fallback gzip -l.
+    
+    if (( footer < 4294967295 )); then
+        # Heuristique : si footer > taille compressée x 1.2 → suspect
+        local compressed_size
+        compressed_size=$(stat -c%s "$file")
+
+        # Si footer plausible, on renvoie FOOTER
+        if (( footer > compressed_size / 2 )); then
+            echo "$footer"
+            return 0
+        fi
+    fi
+
+    # ==== 3. Fallback FIABLE via gzip -l ====
+    local real_size
+    real_size=$(gzip -l "$file" 2>/dev/null | awk 'NR==2 {print $2}' | xargs)
+
+    if [[ -z "$real_size" || "$real_size" = "0" ]]; then
+        echo "0"
+        return 1
+    fi
+
+    echo "$real_size"
+    return 0
+
+}
+
+format_bytes() {
+    local bytes=$1
+    local unit="B"
+    local value=$bytes
+
+    if (( bytes > 1024 )); then
+        value=$(awk "BEGIN {printf \"%.2f\", $bytes/1024}")
+        unit="KB"
+    fi
+    if (( bytes > 1024*1024 )); then
+        value=$(awk "BEGIN {printf \"%.2f\", $bytes/1024/1024}")
+        unit="MB"
+    fi
+    if (( bytes > 1024*1024*1024 )); then
+        value=$(awk "BEGIN {printf \"%.2f\", $bytes/1024/1024/1024}")
+        unit="GB"
+    fi
+    if (( bytes > 1024*1024*1024*1024 )); then
+        value=$(awk "BEGIN {printf \"%.2f\", $bytes/1024/1024/1024/1024}")
+        unit="TB"
+    fi
+
+    echo "${value}${unit}"
+}
+
+
+
+MYSQL_OPTS="--host=$MYSQL_HOST --user=$MYSQL_USER --port=$MYSQL_PORT "
 [ -n "$MYSQL_PASS" ] && MYSQL_OPTS="$MYSQL_OPTS --password=$MYSQL_PASS"
 
 mkdir -p "$TMP_DIR"
@@ -56,6 +139,7 @@ for dir in "$BACKUP_DIR"/*; do
 
     [[ "$(basename "$dir")" == "#mysql50#lost+found" ]] && continue
     [[ "$base" == "mysql" ]] && { echo "⏩ Dossier 'mysql' ignoré (base système)"; continue; }
+    [[ "$base" == "sys" ]] && { echo "⏩ Dossier 'sys' ignoré (base système)"; continue; }
     
  #   last_file=$(ls -1t "$dir"/*.sql.gz 2>/dev/null | head -n1 || true)
 
@@ -178,13 +262,16 @@ if [ "$DRYRUN" = false ]; then
     mysql $MYSQL_OPTS -e "CREATE DATABASE IF NOT EXISTS \`$db\`;"
 fi
 
-    echo
-    echo "▶️  Commande d’import :"
-    #echo "mysql $MYSQL_OPTS $db < <(zcat \"$file\")"
-    echo "zcat $file | pv | mysql $MYSQL_OPTS $db"
+
+    orig_size=$(get_gzip_original_size "$file") || orig_size=0
+    human_size=$(format_bytes "$orig_size")
+
+    echo 
+    echo "▶️  Import ($human_size)..."
+    echo "zcat $file | pv -s $orig_size | mysql $MYSQL_OPTS $db"
+
     if [ "$DRYRUN" = false ]; then
-        #zcat "$file" | mysql $MYSQL_OPTS "$db"
-        zcat "$file" | pv | mysql $MYSQL_OPTS "$db"
+        zcat "$file" | pv -s $orig_size | mysql $MYSQL_OPTS "$db"
     fi
 
 
