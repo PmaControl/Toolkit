@@ -17,10 +17,11 @@ DRYRUN=false
 
 # === Fonction d’aide ===
 usage() {
-  echo "Usage: $0 [-h host] [-u user] [-p password] [--dry-run]"
+  echo "Usage: $0 [-h host] [-u user] [-P port] [-p password] [--dry-run]"
   echo "  -h <host>      Hôte MySQL (par défaut: localhost)"
   echo "  -u <user>      Utilisateur MySQL (par défaut: root)"
   echo "  -p <password>  Mot de passe MySQL"
+  echo "  -P <port>      Port MySQL (par défaut: 3306)"
   echo "  --dry-run      Affiche les commandes sans les exécuter"
   exit 1
 }
@@ -31,6 +32,7 @@ while [[ $# -gt 0 ]]; do
     -h) MYSQL_HOST="$2"; shift 2 ;;
     -u) MYSQL_USER="$2"; shift 2 ;;
     -p) MYSQL_PASS="$2"; shift 2 ;;
+    -p*) MYSQL_PORT="${1#-P}"; shift ;;
     -P) MYSQL_PORT="$2"; shift 2 ;;
     --dry-run) DRYRUN=true; shift ;;
     -*) echo "Option inconnue : $1"; usage ;;
@@ -242,24 +244,34 @@ if (( i == 0 )); then
         echo "mysql $MYSQL_OPTS -e \"$cmd\""
 
         if [ "$DRYRUN" = false ]; then
-            mysql $MYSQL_OPTS -e "$cmd"
+	    echo "gg"
+            #mysql $MYSQL_OPTS -e "$cmd"
         fi
 else
 	echo
 	echo "➡️  START SLAVE UNTIL (vers $log_file:$log_pos)"
 	cmd="START SLAVE UNTIL MASTER_LOG_FILE='$log_file', MASTER_LOG_POS=$log_pos;"
         if [ "$DRYRUN" = false ]; then
-            mysql $MYSQL_OPTS -e "$cmd"
-	    sleep 3
-            mysql $MYSQL_OPTS -e "SHOW SLAVE STATUS\\G" | grep Until || true
+            #mysql $MYSQL_OPTS -e "$cmd"
+	    #sleep 3
+	    echo "gg3"
+            #mysql $MYSQL_OPTS -e "SHOW SLAVE STATUS\\G" | grep Until || true
         fi
 fi
 
+#echo
+#echo "▶️  Création de la base si nécessaire :"
+#echo "mysql $MYSQL_OPTS -e \"CREATE DATABASE IF NOT EXISTS \`$db\`;\""
+#if [ "$DRYRUN" = false ]; then
+#    mysql $MYSQL_OPTS -e "CREATE DATABASE IF NOT EXISTS \`$db\`;"
+#fi
+
 echo
-echo "▶️  Création de la base si nécessaire :"
-echo "mysql $MYSQL_OPTS -e \"CREATE DATABASE IF NOT EXISTS \`$db\`;\""
+echo "▶️  Drop de la base si nécessaire :"
+echo "mysql $MYSQL_OPTS -e \"DROP DATABASE IF EXISTS \`$db\`;\""
 if [ "$DRYRUN" = false ]; then
-    mysql $MYSQL_OPTS -e "CREATE DATABASE IF NOT EXISTS \`$db\`;"
+    #mysql $MYSQL_OPTS -e "DROP DATABASE IF EXISTS \`$db\`;"
+	echo
 fi
 
 
@@ -271,7 +283,7 @@ fi
     echo "zcat $file | pv -s $orig_size | mysql $MYSQL_OPTS $db"
 
     if [ "$DRYRUN" = false ]; then
-        zcat "$file" | pv -s $orig_size | mysql $MYSQL_OPTS "$db"
+        zcat "$file" | pv -s $orig_size | mysql $MYSQL_OPTS "mysql"
     fi
 
 
@@ -282,7 +294,8 @@ done
 echo "=== 5. Commande finale START SLAVE ==="
 echo "mysql $MYSQL_OPTS -e \"START SLAVE;\""
 if [ "$DRYRUN" = false ]; then
-    mysql $MYSQL_OPTS -e "START SLAVE;"
+    #mysql $MYSQL_OPTS -e "START SLAVE;"
+    echo "gg2"
 fi
 
 echo
